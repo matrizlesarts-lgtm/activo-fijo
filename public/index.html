@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Activo Fijo</title>
+<style>
+/* ── Variables ── */
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --surface2: #f1efe8;
+  --border: rgba(0,0,0,0.10);
+  --border2: rgba(0,0,0,0.20);
+  --text: #1a1a18;
+  --text2: #5f5e5a;
+  --text3: #888780;
+  --accent: #185fa5;
+  --accent-bg: #e6f1fb;
+  --accent-dark: #0c447c;
+  --success: #3b6d11;
+  --success-bg: #eaf3de;
+  --warning: #854f0b;
+  --warning-bg: #faeeda;
+  --danger: #a32d2d;
+  --danger-bg: #fcebeb;
+  --purple: #533ab7;
+  --purple-bg: #eeedfe;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+/* ── Login ── */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.login-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:40px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.07)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo h1{font-size:22px;font-weight:600;color:var(--accent);letter-spacing:-0.5px}
+.login-logo p{font-size:13px;color:var(--text3);margin-top:4px}
+.login-err{background:var(--danger-bg);color:var(--danger);padding:8px 12px;border-radius:var(--radius);font-size:13px;margin-bottom:12px;display:none}
+
+/* ── App shell ── */
+#app{display:none;height:100vh;overflow:hidden;flex-direction:column}
+#app.show{display:flex}
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;background:var(--surface);border-right:0.5px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-header{padding:16px;border-bottom:0.5px solid var(--border)}
+.sidebar-logo{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+.sidebar-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.company-filter{padding:8px 12px;border-bottom:0.5px solid var(--border)}
+.company-filter select{width:100%;font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text)}
+nav{padding:8px 0;flex:1}
+.nav-section{padding:8px 16px 3px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;cursor:pointer;color:var(--text2);font-size:13px;border-left:2px solid transparent;transition:all 0.12s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-bg);color:var(--accent-dark);border-left-color:var(--accent);font-weight:500}
+.nav-icon{font-size:14px;width:18px;text-align:center}
+.sidebar-footer{padding:12px;border-top:0.5px solid var(--border)}
+.user-info{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent-bg);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+
+/* ── Main ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:0.5px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.page-title{font-size:16px;font-weight:500}
+.content{padding:24px;flex:1}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.12s;text-decoration:none}
+.btn:hover{background:var(--surface2)}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{color:var(--danger);border-color:rgba(163,45,45,0.3)}
+.btn-danger:hover{background:var(--danger-bg)}
+.btn-success{color:var(--success);border-color:rgba(59,109,17,0.3)}
+.btn-success:hover{background:var(--success-bg)}
+.btn-group{display:flex;gap:6px}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:500}
+
+/* ── Grid ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* ── Stat cards ── */
+.stat-card{background:var(--surface2);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:500}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);border-bottom:0.5px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-blue{background:var(--accent-bg);color:var(--accent-dark)}
+.badge-green{background:var(--success-bg);color:var(--success)}
+.badge-amber{background:var(--warning-bg);color:var(--warning)}
+.badge-red{background:var(--danger-bg);color:var(--danger)}
+.badge-purple{background:var(--purple-bg);color:var(--purple)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+
+/* ── Forms ── */
+.form-group{margin-bottom:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px}
+input,select,textarea{width:100%;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;transition:border 0.12s}
+textarea{resize:vertical;min-height:70px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(24,95,165,0.12)}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:0.5px solid var(--border)}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:0.5px solid var(--border);margin-bottom:20px}
+.tab-btn{padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-0.5px}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.32);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:24px;width:600px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.18)}
+.modal-lg{width:760px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-title{font-size:15px;font-weight:500}
+.modal-close{cursor:pointer;color:var(--text3);font-size:20px;background:none;border:none;padding:2px 6px;line-height:1}
+
+/* ── Alerts ── */
+.alert{padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px}
+.alert-info{background:var(--accent-bg);color:var(--accent-dark)}
+.alert-warning{background:var(--warning-bg);color:var(--warning)}
+.alert-success{background:var(--success-bg);color:var(--success)}
+
+/* ── Misc ── */
+.search-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.search-row input{max-width:220px}
+.search-row select{width:auto;min-width:140px}
+.empty{text-align:center;padding:40px;color:var(--text3)}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;background:var(--accent-bg);color:var(--accent-dark)}
+.tag{display:inline-flex;padding:2px 8px;border-radius:4px;font-size:11px;background:var(--surface2);color:var(--text2);margin:2px}
+.depr-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;width:80px}
+.depr-fill{height:100%;border-radius:3px}
+.history-item{display:flex;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.history-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.mono{font-family:'Courier New',monospace;font-size:12px}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;z-index:999;opacity:0;transition:opacity 0.2s;pointer-events:none}
+#toast.show{opacity:1}
+
+/* ── Pages ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── Print ── */
+@media print{
+  #loginScreen,#app{display:none!important}
+  #printArea{display:block!important}
+}
+#printArea{display:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>ACTIVO FIJO</h1>
+      <p>Sistema de Inventario y Control</p>
+    </div>
+    <div id="loginErr" class="login-err">Usuario o contraseña incorrectos.</div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input id="loginUser" type="text" placeholder="usuario" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input id="loginPass" type="password" placeholder="contraseña" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">Activo Fijo</div>
+        <div class="sidebar-sub">Sistema de Inventario</div>
+      </div>
+      <div class="company-filter">
+        <select id="globalCompany" onchange="setGlobalCompany(this.value)">
+          <option value="">Todas las empresas</option>
+        </select>
+      </div>
+      <nav>
+        <div class="nav-section">Principal</div>
+        <div class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</div>
+        <div class="nav-item" data-page="activos"><span class="nav-icon">□</span>Activos</div>
+        <div class="nav-item" data-page="bodega"><span class="nav-icon">⬜</span>Bodega</div>
+        <div class="nav-section">Catálogos</div>
+        <div class="nav-item" data-page="categorias"><span class="nav-icon">◈</span>Categorías</div>
+        <div class="nav-item" data-page="empleados"><span class="nav-icon">◉</span>Empleados</div>
+        <div class="nav-item" data-page="areas"><span class="nav-icon">◫</span>Áreas</div>
+        <div class="nav-item" data-page="empresas"><span class="nav-icon">◪</span>Empresas</div>
+        <div class="nav-section">Operaciones</div>
+        <div class="nav-item" data-page="asignaciones"><span class="nav-icon">⟶</span>Asignaciones</div>
+        <div class="nav-item" data-page="traslados"><span class="nav-icon">⇄</span>Traslados</div>
+        <div class="nav-item" data-page="bajas"><span class="nav-icon">✕</span>Bajas</div>
+        <div class="nav-section">Reportes</div>
+        <div class="nav-item" data-page="historial"><span class="nav-icon">◷</span>Historial</div>
+        <div class="nav-item" data-page="depreciacion"><span class="nav-icon">↘</span>Depreciación</div>
+        <div class="nav-item" data-page="reportes"><span class="nav-icon">▤</span>Reportes</div>
+        <div class="nav-section">Sistema</div>
+        <div class="nav-item" data-page="usuarios"><span class="nav-icon">◎</span>Usuarios</div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="sidebarAvatar">A</div>
+          <div>
+            <div style="font-size:12px;font-weight:500" id="sidebarUser">Administrador</div>
+            <div style="font-size:11px;color:var(--text3)" id="sidebarRol">admin</div>
+          </div>
+        </div>
+        <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+      <div class="topbar">
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="companyBadge" class="badge badge-blue" style="display:none"></span>
+          <button class="btn btn-primary btn-sm" onclick="openActivo()">+ Nuevo activo</button>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div id="page-dashboard" class="page active">
+          <div class="grid4" style="margin-bottom:20px">
+            <div class="stat-card"><div class="stat-label">Total activos</div><div class="stat-value" id="st-total">—</div><div class="stat-sub">registrados</div></div>
+            <div class="stat-card"><div class="stat-label">Asignados</div><div class="stat-value" id="st-asig">—</div><div class="stat-sub">con responsable</div></div>
+            <div class="stat-card"><div class="stat-label">En bodega</div><div class="stat-value" id="st-bodega">—</div><div class="stat-sub">sin asignar</div></div>
+            <div class="stat-card"><div class="stat-label">Dados de baja</div><div class="stat-value" id="st-bajas">—</div><div class="stat-sub">fuera de inventario</div></div>
+          </div>
+          <div class="grid2">
+            <div class="card"><div class="card-header"><span class="card-title">Últimas asignaciones</span></div><div id="dash-asig"></div></div>
+            <div class="card"><div class="card-header"><span class="card-title">Activos por categoría</span></div><div id="dash-cat"></div></div>
+          </div>
+          <div class="card"><div class="card-header"><span class="card-title">Garantías próximas a vencer (30 días)</span></div><div id="dash-garantias"></div></div>
+        </div>
+
+        <!-- ACTIVOS -->
+        <div id="page-activos" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Activos registrados</span><button class="btn btn-primary btn-sm" onclick="openActivo()">+ Nuevo</button></div>
+            <div class="search-row">
+              <input type="text" id="searchActivo" placeholder="Buscar..." oninput="loadActivos()">
+              <select id="fCatActivo" onchange="loadActivos()"><option value="">Todas categorías</option></select>
+              <select id="fEmpActivo" onchange="loadActivos()"><option value="">Todas empresas</option></select>
+              <select id="fEstActivo" onchange="loadActivos()"><option value="">Todos estados</option><option>activo</option><option>baja</option><option>mantenimiento</option></select>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa</th><th>Estado</th><th>Responsable</th><th>Costo</th><th>Acciones</th></tr></thead><tbody id="tbActivos"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- BODEGA -->
+        <div id="page-bodega" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Bodega / Sin asignar</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa propietaria</th><th>Condición</th><th>Costo</th><th>Acción</th></tr></thead><tbody id="tbBodega"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- CATEGORIAS -->
+        <div id="page-categorias" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Categorías de activos</span><button class="btn btn-primary btn-sm" onclick="openCategoria()">+ Nueva</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCat"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- EMPLEADOS -->
+        <div id="page-empleados" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Empleados / Responsables</span><button class="btn btn-primary btn-sm" onclick="openEmpleado()">+ Nuevo</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Cargo</th><th>Área</th><th>Empresa</th><th>Activos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbEmp"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- AREAS -->
+        <div id="page-areas" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Áreas / Departamentos</span><button class="btn btn-primary btn-sm" onclick="openArea()">+ Nueva</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Área</th><th>Empresa</th><th>Responsable</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbAreas"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- EMPRESAS -->
+        <div id="page-empresas" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Empresas</span><button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Nueva</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>RUC/NIT</th><th>Contacto</th><th>Activos propios</th><th>En uso</th><th>Acciones</th></tr></thead><tbody id="tbEmpresas"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- ASIGNACIONES -->
+        <div id="page-asignaciones" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Asignaciones de activos</span><button class="btn btn-primary btn-sm" onclick="openAsignacion()">+ Nueva</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Empleado</th><th>Empresa uso</th><th>Fecha</th><th>Condición</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbAsig"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- TRASLADOS -->
+        <div id="page-traslados" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Traslados</span><button class="btn btn-primary btn-sm" onclick="openTraslado()">+ Registrar</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Activo</th><th>De</th><th>A</th><th>Empresa destino</th><th>Fecha</th><th>Motivo</th><th>Condición</th></tr></thead><tbody id="tbTraslados"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- BAJAS -->
+        <div id="page-bajas" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Bajas de activos</span><button class="btn btn-primary btn-sm" onclick="openBaja()">+ Registrar</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Autorizado por</th></tr></thead><tbody id="tbBajas"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="page-historial" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Historial de movimientos</span></div>
+            <div class="search-row">
+              <select id="fHistTipo" onchange="loadHistorial()"><option value="">Todos los tipos</option><option value="alta">Alta</option><option value="asignacion">Asignación</option><option value="traslado">Traslado</option><option value="devolucion">Devolución</option><option value="baja">Baja</option></select>
+            </div>
+            <div id="historialList"></div>
+          </div>
+        </div>
+
+        <!-- DEPRECIACION -->
+        <div id="page-depreciacion" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Control de depreciación</span></div>
+            <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Categoría</th><th>Costo original</th><th>Vida útil</th><th>Dep. anual</th><th>Valor actual</th><th>% Depreciado</th></tr></thead><tbody id="tbDepr"></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- REPORTES -->
+        <div id="page-reportes" class="page">
+          <div class="grid2">
+            <div class="card">
+              <div class="card-header"><span class="card-title">Hoja de entrega</span></div>
+              <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Hoja firmada con cláusula de responsabilidad del empleado.</p>
+              <div class="form-group"><label>Empleado</label><select id="rptEmp"></select></div>
+              <button class="btn btn-primary btn-sm" onclick="printHoja()">Imprimir hoja de entrega</button>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Informe contabilidad anual</span></div>
+              <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Listado de activos con depreciación para contabilidad.</p>
+              <div class="form-row">
+                <div class="form-group"><label>Empresa</label><select id="rptEmpresa"><option value="">Todas</option></select></div>
+                <div class="form-group"><label>Año</label><select id="rptAnio"><option>2024</option><option selected>2025</option><option>2026</option></select></div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="printContabilidad()">Generar informe</button>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Expediente de empleado</span></div>
+              <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Historial completo de activos (útil para liquidaciones).</p>
+              <div class="form-group"><label>Empleado</label><select id="rptExpEmp"></select></div>
+              <button class="btn btn-primary btn-sm" onclick="printExpediente()">Ver expediente</button>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Inventario por empresa</span></div>
+              <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Activos propios y en uso por empresa.</p>
+              <div class="form-group"><label>Empresa</label><select id="rptInvEmp"><option value="">Todas</option></select></div>
+              <button class="btn btn-primary btn-sm" onclick="printInventario()">Generar inventario</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- USUARIOS -->
+        <div id="page-usuarios" class="page">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Usuarios del sistema</span><button class="btn btn-primary btn-sm" onclick="openUsuario()">+ Nuevo</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Empresa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbUsuarios"></tbody></table></div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+  </div><!-- /app-body -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+
+<!-- Modal Activo -->
+<div class="overlay" id="ovActivo">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mActivoTitle">Nuevo activo</span><button class="modal-close" onclick="closeModal('ovActivo')">×</button></div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(this,'tGeneral')">General</button>
+      <button class="tab-btn" onclick="switchTab(this,'tCompra')">Compra / Garantía</button>
+      <button class="tab-btn" onclick="switchTab(this,'tCaract')">Características</button>
+    </div>
+    <div id="tGeneral" class="tab-pane active">
+      <div class="form-row"><div class="form-group"><label>Código *</label><input id="aCodigo" placeholder="AF-001"></div><div class="form-group"><label>Empresa propietaria *</label><select id="aEmpresa"></select></div></div>
+      <div class="form-row"><div class="form-group"><label>Categoría *</label><select id="aCategoria" onchange="onCatChange()"></select></div><div class="form-group"><label>Área</label><select id="aArea"><option value="">Sin área</option></select></div></div>
+      <div class="form-group"><label>Descripción *</label><input id="aDesc" placeholder="Nombre descriptivo del activo"></div>
+      <div class="form-row"><div class="form-group"><label>Marca</label><input id="aMarca"></div><div class="form-group"><label>Modelo</label><input id="aModelo"></div></div>
+      <div class="form-row"><div class="form-group"><label>No. de serie</label><input id="aSerie"></div><div class="form-group"><label>Color</label><input id="aColor"></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>Costo ($)</label><input id="aCosto" type="number" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Condición</label><select id="aCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option><option value="usado">Usado</option></select></div>
+      </div>
+      <div class="form-group"><label>Notas</label><textarea id="aNotas"></textarea></div>
+    </div>
+    <div id="tCompra" class="tab-pane">
+      <div class="alert alert-info">Los activos sin factura o que ya estaban en uso pueden dejar estos campos vacíos.</div>
+      <div class="form-row"><div class="form-group"><label>Fecha de compra</label><input id="aFechaCompra" type="date"></div><div class="form-group"><label>Proveedor</label><input id="aProveedor"></div></div>
+      <div class="form-row"><div class="form-group"><label>No. de factura</label><input id="aFactura"></div><div class="form-group"><label>Monto factura ($)</label><input id="aMontoFactura" type="number"></div></div>
+      <div class="form-row"><div class="form-group"><label>Garantía (meses)</label><input id="aGarantia" type="number" min="0" oninput="calcVenc()"></div><div class="form-group"><label>Vencimiento garantía</label><input id="aVencGarantia" type="date"></div></div>
+      <div class="form-group"><label>Vida útil (años)</label><input id="aVidaUtil" type="number" min="0" placeholder="5"></div>
+    </div>
+    <div id="tCaract" class="tab-pane">
+      <div id="camposDin"></div>
+      <div class="form-group"><label>Especificaciones adicionales</label><textarea id="aEspec" placeholder="RAM, procesador, dimensiones, capacidad, etc."></textarea></div>
+      <div class="form-group">
+        <label>Accesorios incluidos</label>
+        <div id="accList" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px"><input id="newAcc" placeholder="Agregar accesorio..." style="flex:1"><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
+      </div>
+    </div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovActivo')">Cancelar</button><button class="btn btn-primary" onclick="saveActivo()">Guardar activo</button></div>
+  </div>
+</div>
+
+<!-- Modal Categoría -->
+<div class="overlay" id="ovCat">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mCatTitle">Nueva categoría</span><button class="modal-close" onclick="closeModal('ovCat')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Nombre *</label><input id="cNombre"></div><div class="form-group"><label>Tipo</label><select id="cTipo"><option value="tecnologico">Tecnológico</option><option value="mobiliario">Mobiliario</option><option value="gastronomico">Gastronómico</option><option value="vehiculo">Vehículo</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Vida útil (años)</label><input id="cVidaUtil" type="number" min="0"></div><div class="form-group"><label>% Depreciación anual</label><input id="cDep" type="number" min="0"></div></div>
+    <div class="form-group"><label>Descripción</label><textarea id="cDesc"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovCat')">Cancelar</button><button class="btn btn-primary" onclick="saveCat()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal Empleado -->
+<div class="overlay" id="ovEmp">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mEmpTitle">Nuevo empleado</span><button class="modal-close" onclick="closeModal('ovEmp')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Nombre completo *</label><input id="eNombre"></div><div class="form-group"><label>DUI / Identificación</label><input id="eDUI"></div></div>
+    <div class="form-row"><div class="form-group"><label>Cargo *</label><input id="eCargo"></div><div class="form-group"><label>Área</label><select id="eArea"><option value="">Sin área</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Empresa *</label><select id="eEmpresa"></select></div><div class="form-group"><label>Correo</label><input id="eCorreo" type="email"></div></div>
+    <div class="form-row"><div class="form-group"><label>Teléfono</label><input id="eTel"></div><div class="form-group"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmp')">Cancelar</button><button class="btn btn-primary" onclick="saveEmp()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal Área -->
+<div class="overlay" id="ovArea">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mAreaTitle">Nueva área</span><button class="modal-close" onclick="closeModal('ovArea')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Nombre *</label><input id="arNombre"></div><div class="form-group"><label>Empresa *</label><select id="arEmpresa"></select></div></div>
+    <div class="form-group"><label>Responsable del área</label><select id="arResp"><option value="">Sin responsable</option></select></div>
+    <div class="form-group"><label>Descripción</label><textarea id="arDesc"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovArea')">Cancelar</button><button class="btn btn-primary" onclick="saveArea()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal Empresa -->
+<div class="overlay" id="ovEmpresa">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mEmpresaTitle">Nueva empresa</span><button class="modal-close" onclick="closeModal('ovEmpresa')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Nombre *</label><input id="emNombre"></div><div class="form-group"><label>RUC / NIT</label><input id="emRUC"></div></div>
+    <div class="form-row"><div class="form-group"><label>Contacto</label><input id="emContacto"></div><div class="form-group"><label>Teléfono</label><input id="emTel"></div></div>
+    <div class="form-group"><label>Dirección</label><textarea id="emDir"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmpresa')">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresa()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal Asignación -->
+<div class="overlay" id="ovAsig">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Nueva asignación</span><button class="modal-close" onclick="closeModal('ovAsig')">×</button></div>
+    <div class="alert alert-warning">Al guardar se genera la hoja de entrega. El empleado es responsable por daño o pérdida del equipo.</div>
+    <div class="form-row"><div class="form-group"><label>Activo *</label><select id="asActivo"></select></div><div class="form-group"><label>Empleado responsable *</label><select id="asEmp"></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Empresa en uso</label><select id="asEmpUso"></select></div><div class="form-group"><label>Fecha *</label><input id="asFecha" type="date"></div></div>
+    <div class="form-row"><div class="form-group"><label>Condición al entregar</label><select id="asCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="form-group"><label>Entregado por</label><input id="asEntregadoPor"></div></div>
+    <div class="form-group"><label>Observaciones</label><textarea id="asObs"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovAsig')">Cancelar</button><button class="btn btn-primary" onclick="saveAsig()">Guardar asignación</button></div>
+  </div>
+</div>
+
+<!-- Modal Traslado -->
+<div class="overlay" id="ovTraslado">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Registrar traslado</span><button class="modal-close" onclick="closeModal('ovTraslado')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Activo *</label><select id="trActivo" onchange="onTrActivoChange()"></select></div><div class="form-group"><label>Fecha *</label><input id="trFecha" type="date"></div></div>
+    <div id="trInfoActual" class="alert alert-info" style="margin-bottom:12px">Seleccione un activo para ver responsable actual.</div>
+    <div class="form-row"><div class="form-group"><label>Nuevo responsable *</label><select id="trNuevoEmp"></select></div><div class="form-group"><label>Empresa destino</label><select id="trEmpDest"></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Condición al recibir</label><select id="trCondicion"><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="form-group"><label>Motivo</label><input id="trMotivo"></div></div>
+    <div class="form-group"><label>Observaciones</label><textarea id="trObs"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovTraslado')">Cancelar</button><button class="btn btn-primary" onclick="saveTraslado()">Registrar traslado</button></div>
+  </div>
+</div>
+
+<!-- Modal Baja -->
+<div class="overlay" id="ovBaja">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Dar de baja activo</span><button class="modal-close" onclick="closeModal('ovBaja')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Activo *</label><select id="baActivo"></select></div><div class="form-group"><label>Fecha *</label><input id="baFecha" type="date"></div></div>
+    <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="baTipo"><option value="falla">Falla / daño</option><option value="obsoleto">Obsoleto</option><option value="pieza">Pieza / parte</option><option value="robo">Robo / extravío</option><option value="donacion">Donación</option><option value="venta">Venta</option><option value="autorizado">Fuera de inventario (autorizado)</option></select></div><div class="form-group"><label>Autorizado por</label><input id="baAutorizado"></div></div>
+    <div class="form-group"><label>Motivo / descripción de la falla</label><textarea id="baMotivo"></textarea></div>
+    <div class="form-group"><label>No. de reporte / referencia</label><input id="baReporte"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovBaja')">Cancelar</button><button class="btn btn-danger" onclick="saveBaja()">Dar de baja</button></div>
+  </div>
+</div>
+
+<!-- Modal Usuario -->
+<div class="overlay" id="ovUser">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mUserTitle">Nuevo usuario</span><button class="modal-close" onclick="closeModal('ovUser')">×</button></div>
+    <div class="form-row"><div class="form-group"><label>Usuario *</label><input id="uUser"></div><div class="form-group"><label>Contraseña</label><input id="uPass" type="password" placeholder="Dejar vacío para no cambiar"></div></div>
+    <div class="form-row"><div class="form-group"><label>Nombre completo</label><input id="uNombre"></div><div class="form-group"><label>Rol *</label><select id="uRol"><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="consulta">Solo consulta</option><option value="bodega">Bodega</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Empresa asignada</label><select id="uEmpresa"><option value="">Todas</option></select></div><div class="form-group"><label>Estado</label><select id="uEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovUser')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Modal Detalle Activo -->
+<div class="overlay" id="ovDetalle">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mDetalleTitle">Detalle del activo</span><button class="modal-close" onclick="closeModal('ovDetalle')">×</button></div>
+    <div id="detalleContent"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovDetalle')">Cerrar</button><button class="btn btn-primary" onclick="editFromDetalle()">Editar</button></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Print area -->
+<div id="printArea"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   Estado global y caché
+═══════════════════════════════════════════════════════════════ */
+let cache = { empresas:[], categorias:[], areas:[], empleados:[], activos:[], asignaciones:[], traslados:[], bajas:[], historial:[], usuarios:[] };
+let editingId = {};
+let accs = [];
+let currentDetalleId = null;
+let globalEmp = '';
+let currentUser = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   API helper
+═══════════════════════════════════════════════════════════════ */
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api/' + path, opts);
+  if (r.status === 401 && path !== 'login') { showLogin(); return null; }
+  return r.json().catch(() => ({}));
+}
+const GET  = p => api('GET', p);
+const POST = (p, b) => api('POST', p, b);
+const PUT  = (p, b) => api('PUT', p, b);
+const DEL  = p => api('DELETE', p);
+
+/* ═══════════════════════════════════════════════════════════════
+   Auth
+═══════════════════════════════════════════════════════════════ */
+async function doLogin() {
+  const usuario = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const r = await POST('login', { usuario, password });
+  if (!r || r.error) { document.getElementById('loginErr').style.display = 'block'; return; }
+  currentUser = r.user;
+  document.getElementById('loginErr').style.display = 'none';
+  showApp();
+}
+
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogout() {
+  await POST('logout');
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').classList.remove('show');
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+  document.getElementById('sidebarUser').textContent = currentUser.nombre || currentUser.usuario;
+  document.getElementById('sidebarRol').textContent = currentUser.rol;
+  document.getElementById('sidebarAvatar').textContent = (currentUser.nombre || currentUser.usuario).slice(0,2).toUpperCase();
+  loadAll();
+  navigate('dashboard');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Navigation
+═══════════════════════════════════════════════════════════════ */
+const PAGE_TITLES = { dashboard:'Dashboard', activos:'Activos', bodega:'Bodega / Sin asignar', categorias:'Categorías', empleados:'Empleados', areas:'Áreas', empresas:'Empresas', asignaciones:'Asignaciones', traslados:'Traslados', bajas:'Bajas', historial:'Historial de movimientos', depreciacion:'Depreciación', reportes:'Reportes', usuarios:'Usuarios' };
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[page] || page;
+  renderPage(page);
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(n => n.addEventListener('click', () => navigate(n.dataset.page)));
+
+function renderPage(page) {
+  const fn = {
+    dashboard: renderDashboard,
+    activos: loadActivos,
+    bodega: renderBodega,
+    categorias: renderCategorias,
+    empleados: renderEmpleados,
+    areas: renderAreas,
+    empresas: renderEmpresas,
+    asignaciones: renderAsignaciones,
+    traslados: renderTraslados,
+    bajas: renderBajas,
+    historial: loadHistorial,
+    depreciacion: renderDepr,
+    reportes: populateReportSelects,
+    usuarios: renderUsuarios
+  };
+  if (fn[page]) fn[page]();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Data loading
+═══════════════════════════════════════════════════════════════ */
+async function loadAll() {
+  const keys = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios'];
+  const results = await Promise.all(keys.map(k => GET(k)));
+  keys.forEach((k, i) => { if (results[i]) cache[k] = results[i]; });
+  populateAllSelects();
+}
+
+function setGlobalCompany(v) {
+  globalEmp = v;
+  const b = document.getElementById('companyBadge');
+  if (v) {
+    const em = cache.empresas.find(e => String(e.id) === String(v));
+    b.textContent = em ? em.nombre : '';
+    b.style.display = '';
+  } else b.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Lookup helpers
+═══════════════════════════════════════════════════════════════ */
+const empN  = id => (cache.empresas.find(x=>x.id==id)||{}).nombre||'-';
+const catN  = id => (cache.categorias.find(x=>x.id==id)||{}).nombre||'-';
+const empNm = id => (cache.empleados.find(x=>x.id==id)||{}).nombre||'-';
+const areaN = id => (cache.areas.find(x=>x.id==id)||{}).nombre||'-';
+const actC  = id => { const a=cache.activos.find(x=>x.id==id); return a?`${a.codigo} — ${a.descripcion}`:'-'; };
+const asigActual = id => cache.asignaciones.filter(a=>a.activoId==id&&a.estado==='activo').slice(-1)[0];
+const today = () => new Date().toISOString().split('T')[0];
+
+/* ═══════════════════════════════════════════════════════════════
+   Badges
+═══════════════════════════════════════════════════════════════ */
+const BADGE_COLORS = { activo:'green', baja:'red', mantenimiento:'amber', inactivo:'gray', despedido:'red', nuevo:'blue', bueno:'green', regular:'amber', malo:'red', usado:'gray', alta:'purple', asignacion:'green', traslado:'blue', devolucion:'amber' };
+const badge = (text, cls) => `<span class="badge badge-${cls||BADGE_COLORS[text]||'gray'}">${text}</span>`;
+const tipoBadge = t => { const l={alta:'Alta',asignacion:'Asignación',traslado:'Traslado',devolucion:'Devolución',baja:'Baja'}; return badge(l[t]||t, BADGE_COLORS[t]||'gray'); };
+
+/* ═══════════════════════════════════════════════════════════════
+   Select population
+═══════════════════════════════════════════════════════════════ */
+function sel(id, opts, empty) {
+  const el = document.getElementById(id); if (!el) return;
+  const prev = el.value;
+  el.innerHTML = (empty !== undefined ? `<option value="">${empty}</option>` : '') + opts;
+  if (prev) el.value = prev;
+}
+
+function empOpts() { return cache.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join(''); }
+function catOpts() { return cache.categorias.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join(''); }
+function empNmOpts() { return cache.empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join(''); }
+function areaOpts() { return cache.areas.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join(''); }
+function activoOpts() { return cache.activos.filter(a=>a.estado==='activo').map(a=>`<option value="${a.id}">${a.codigo} — ${a.descripcion}</option>`).join(''); }
+
+function populateAllSelects() {
+  sel('globalCompany', empOpts(), 'Todas las empresas');
+  if (globalEmp) document.getElementById('globalCompany').value = globalEmp;
+  sel('fCatActivo', catOpts(), 'Todas categorías');
+  sel('fEmpActivo', empOpts(), 'Todas empresas');
+  sel('aEmpresa', empOpts());
+  sel('aCategoria', catOpts());
+  sel('aArea', areaOpts(), 'Sin área');
+  sel('eEmpresa', empOpts());
+  sel('eArea', areaOpts(), 'Sin área');
+  sel('arEmpresa', empOpts());
+  sel('arResp', empNmOpts(), 'Sin responsable');
+  sel('asActivo', activoOpts());
+  sel('asEmp', empNmOpts());
+  sel('asEmpUso', empOpts());
+  sel('trActivo', activoOpts());
+  sel('trNuevoEmp', empNmOpts());
+  sel('trEmpDest', empOpts());
+  sel('baActivo', activoOpts());
+  sel('uEmpresa', empOpts(), 'Todas');
+  populateReportSelects();
+}
+
+function populateReportSelects() {
+  sel('rptEmp', cache.empleados.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join(''), 'Seleccionar...');
+  sel('rptEmpresa', empOpts(), 'Todas');
+  sel('rptExpEmp', cache.empleados.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join(''), 'Seleccionar...');
+  sel('rptInvEmp', empOpts(), 'Todas');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  const s = await GET('stats');
+  if (!s) return;
+  document.getElementById('st-total').textContent = s.total;
+  document.getElementById('st-asig').textContent = s.asignados;
+  document.getElementById('st-bodega').textContent = s.bodega;
+  document.getElementById('st-bajas').textContent = s.bajas;
+
+  const ultimas = cache.asignaciones.filter(a=>a.estado==='activo').slice(-5).reverse();
+  document.getElementById('dash-asig').innerHTML = ultimas.length
+    ? ultimas.map(a=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px"><span style="flex:2">${actC(a.activoId)}</span><span style="flex:1;color:var(--text2)">${empNm(a.empleadoId)}</span><span style="color:var(--text3)">${a.fecha}</span></div>`).join('')
+    : '<div class="empty">Sin asignaciones</div>';
+
+  const catCount = {};
+  cache.activos.filter(a=>a.estado==='activo').forEach(a=>{ const c=catN(a.categoriaId); catCount[c]=(catCount[c]||0)+1; });
+  document.getElementById('dash-cat').innerHTML = Object.entries(catCount).map(([c,n])=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:13px"><span>${c}</span><span style="font-weight:500">${n}</span></div>`).join('') || '<div class="empty">Sin datos</div>';
+
+  const hoy = new Date(); const en30 = new Date(); en30.setDate(en30.getDate()+30);
+  const pv = cache.activos.filter(a=>a.vencGarantia&&new Date(a.vencGarantia)<=en30&&new Date(a.vencGarantia)>=hoy);
+  document.getElementById('dash-garantias').innerHTML = pv.length
+    ? `<table><thead><tr><th>Activo</th><th>Vencimiento</th><th>Proveedor</th></tr></thead><tbody>${pv.map(a=>`<tr><td>${a.codigo} — ${a.descripcion}</td><td>${badge(a.vencGarantia,'amber')}</td><td>${a.proveedor||'-'}</td></tr>`).join('')}</tbody></table>`
+    : '<div style="color:var(--text3);font-size:13px">No hay garantías próximas a vencer.</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIVOS
+═══════════════════════════════════════════════════════════════ */
+async function loadActivos() {
+  const list = await GET('activos');
+  if (!list) return;
+  cache.activos = list;
+  populateAllSelects();
+  renderActivos();
+}
+
+function renderActivos() {
+  const q  = (document.getElementById('searchActivo')||{}).value||'';
+  const fC = (document.getElementById('fCatActivo')||{}).value||'';
+  const fE = (document.getElementById('fEmpActivo')||{}).value||'';
+  const fS = (document.getElementById('fEstActivo')||{}).value||'';
+  let list = cache.activos.filter(a => {
+    if (globalEmp && String(a.empresaId)!==globalEmp) return false;
+    if (fC && String(a.categoriaId)!==fC) return false;
+    if (fE && String(a.empresaId)!==fE) return false;
+    if (fS && a.estado!==fS) return false;
+    if (q && !a.descripcion.toLowerCase().includes(q.toLowerCase()) && !a.codigo.toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
+  const resp = a => { const x=asigActual(a.id); return x?empNm(x.empleadoId):`<span style="color:var(--text3)">Sin asignar</span>`; };
+  document.getElementById('tbActivos').innerHTML = list.length
+    ? list.map(a=>`<tr>
+        <td><span class="mono">${a.codigo}</span></td>
+        <td><span style="font-weight:500">${a.descripcion}</span><br><span style="font-size:11px;color:var(--text3)">${a.marca||''} ${a.modelo||''}</span></td>
+        <td>${catN(a.categoriaId)}</td>
+        <td>${empN(a.empresaId)}</td>
+        <td>${badge(a.estado)}</td>
+        <td>${resp(a)}</td>
+        <td>$${(a.costo||0).toFixed(2)}</td>
+        <td><div class="btn-group">
+          <button class="btn btn-sm" onclick="verDetalle(${a.id})">Ver</button>
+          <button class="btn btn-sm" onclick="openActivo(${a.id})">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="openBaja(${a.id})">Baja</button>
+        </div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" class="empty">Sin activos registrados</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BODEGA
+═══════════════════════════════════════════════════════════════ */
+function renderBodega() {
+  const list = cache.activos.filter(a => a.estado==='activo' && !asigActual(a.id) && (!globalEmp || String(a.empresaId)===globalEmp));
+  document.getElementById('tbBodega').innerHTML = list.length
+    ? list.map(a=>`<tr>
+        <td><span class="mono">${a.codigo}</span></td>
+        <td>${a.descripcion}</td>
+        <td>${catN(a.categoriaId)}</td>
+        <td>${empN(a.empresaId)}</td>
+        <td>${badge(a.condicion)}</td>
+        <td>$${(a.costo||0).toFixed(2)}</td>
+        <td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})">Asignar</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="empty">No hay activos en bodega</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CATEGORIAS
+═══════════════════════════════════════════════════════════════ */
+function renderCategorias() {
+  document.getElementById('tbCat').innerHTML = cache.categorias.map(c => {
+    const n = cache.activos.filter(a=>a.categoriaId==c.id).length;
+    return `<tr>
+      <td><span style="font-weight:500">${c.nombre}</span></td>
+      <td>${badge(c.tipo,'blue')}</td>
+      <td>${c.vidaUtil||'-'} años</td>
+      <td>${c.depreciacion||'-'}%</td>
+      <td>${n}</td>
+      <td><div class="btn-group">
+        <button class="btn btn-sm" onclick="openCategoria(${c.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('categorias',${c.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">Sin categorías</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EMPLEADOS
+═══════════════════════════════════════════════════════════════ */
+function renderEmpleados() {
+  const list = cache.empleados.filter(e => !globalEmp || String(e.empresaId)===globalEmp);
+  document.getElementById('tbEmp').innerHTML = list.map(e => {
+    const n = cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div>
+        <span style="font-weight:500">${e.nombre}</span>
+      </div></td>
+      <td>${e.cargo}</td>
+      <td>${areaN(e.areaId)}</td>
+      <td>${empN(e.empresaId)}</td>
+      <td>${n} activos</td>
+      <td>${badge(e.estado)}</td>
+      <td><div class="btn-group">
+        <button class="btn btn-sm" onclick="verExpediente(${e.id})">Expediente</button>
+        <button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty">Sin empleados</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AREAS
+═══════════════════════════════════════════════════════════════ */
+function renderAreas() {
+  document.getElementById('tbAreas').innerHTML = cache.areas.map(a => {
+    const n = cache.activos.filter(x=>x.areaId==a.id).length;
+    return `<tr>
+      <td><span style="font-weight:500">${a.nombre}</span></td>
+      <td>${empN(a.empresaId)}</td>
+      <td>${a.responsable?empNm(a.responsable):'-'}</td>
+      <td>${n}</td>
+      <td><div class="btn-group">
+        <button class="btn btn-sm" onclick="openArea(${a.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('areas',${a.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">Sin áreas</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EMPRESAS
+═══════════════════════════════════════════════════════════════ */
+function renderEmpresas() {
+  document.getElementById('tbEmpresas').innerHTML = cache.empresas.map(e => {
+    const propios = cache.activos.filter(a=>a.empresaId==e.id).length;
+    const enUso = cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;
+    return `<tr>
+      <td><span style="font-weight:500">${e.nombre}</span></td>
+      <td><span class="mono">${e.ruc||'-'}</span></td>
+      <td>${e.contacto||'-'}</td>
+      <td>${propios}</td>
+      <td>${enUso}</td>
+      <td><div class="btn-group">
+        <button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">Sin empresas</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ASIGNACIONES
+═══════════════════════════════════════════════════════════════ */
+function renderAsignaciones() {
+  const list = cache.asignaciones.filter(a => !globalEmp || String(a.empresaUsoId)===globalEmp);
+  document.getElementById('tbAsig').innerHTML = list.length
+    ? list.map(a=>`<tr>
+        <td>${actC(a.activoId)}</td>
+        <td>${empNm(a.empleadoId)}</td>
+        <td>${empN(a.empresaUsoId)}</td>
+        <td>${a.fecha}</td>
+        <td>${badge(a.condicionEntrega)}</td>
+        <td>${badge(a.estado)}</td>
+        <td><div class="btn-group">
+          <button class="btn btn-sm" onclick="printHojaById(${a.id})">Imprimir</button>
+          ${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})">Devolver</button>`:''}
+        </div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Sin asignaciones</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRASLADOS
+═══════════════════════════════════════════════════════════════ */
+function renderTraslados() {
+  document.getElementById('tbTraslados').innerHTML = cache.traslados.length
+    ? cache.traslados.map(t=>`<tr>
+        <td>${actC(t.activoId)}</td>
+        <td>${t.deEmpleadoId?empNm(t.deEmpleadoId):'—'}</td>
+        <td>${empNm(t.aEmpleadoId)}</td>
+        <td>${empN(t.empresaDestinoId)}</td>
+        <td>${t.fecha}</td>
+        <td>${t.motivo||'—'}</td>
+        <td>${badge(t.condicionRecibe)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Sin traslados registrados</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BAJAS
+═══════════════════════════════════════════════════════════════ */
+function renderBajas() {
+  document.getElementById('tbBajas').innerHTML = cache.bajas.length
+    ? cache.bajas.map(b=>`<tr>
+        <td>${actC(b.activoId)}</td>
+        <td>${badge(b.tipo,'red')}</td>
+        <td>${b.fecha}</td>
+        <td>${b.motivo||'—'}</td>
+        <td>${b.autorizado||'—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" class="empty">Sin bajas registradas</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTORIAL
+═══════════════════════════════════════════════════════════════ */
+async function loadHistorial() {
+  const list = await GET('historial');
+  if (!list) return;
+  cache.historial = list;
+  renderHistorial();
+}
+
+function renderHistorial() {
+  const fT = (document.getElementById('fHistTipo')||{}).value||'';
+  const HCOLORS = { alta:'#533ab7', asignacion:'#3b6d11', traslado:'#185fa5', devolucion:'#854f0b', baja:'#a32d2d' };
+  let list = [...cache.historial].reverse().filter(h => !fT || h.tipo===fT);
+  document.getElementById('historialList').innerHTML = list.length
+    ? list.map(h=>`<div class="history-item">
+        <div class="history-dot" style="background:${HCOLORS[h.tipo]||'#888'}"></div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>${tipoBadge(h.tipo)} <span style="font-size:13px;font-weight:500;margin-left:6px">${actC(h.activoId)}</span></div>
+            <span style="font-size:11px;color:var(--text3)">${h.fecha}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div>
+          ${h.empleadoId?`<div style="font-size:11px;color:var(--text3)">Empleado: ${empNm(h.empleadoId)}</div>`:''}
+        </div>
+      </div>`).join('')
+    : '<div class="empty">Sin registros</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DEPRECIACION
+═══════════════════════════════════════════════════════════════ */
+function renderDepr() {
+  const list = cache.activos.filter(a => a.estado==='activo' && a.costo && a.vidaUtil);
+  document.getElementById('tbDepr').innerHTML = list.map(a => {
+    const vu = a.vidaUtil||5;
+    const da = a.costo/vu;
+    const anos = a.fechaCompra ? (new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000) : 0;
+    const dt = Math.min(anos*da, a.costo);
+    const va = Math.max(a.costo-dt, 0);
+    const pct = Math.min((dt/a.costo)*100, 100);
+    const col = pct>80?'#e24b4a':pct>50?'#ef9f27':'#639922';
+    return `<tr>
+      <td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text3)">${a.descripcion}</span></td>
+      <td>${catN(a.categoriaId)}</td>
+      <td>$${a.costo.toFixed(2)}</td>
+      <td>${vu} años</td>
+      <td>$${da.toFixed(2)}</td>
+      <td style="font-weight:500">$${va.toFixed(2)}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div>
+        <span style="font-size:12px">${pct.toFixed(0)}%</span>
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="empty">Sin activos con depreciación configurada</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   USUARIOS
+═══════════════════════════════════════════════════════════════ */
+function renderUsuarios() {
+  document.getElementById('tbUsuarios').innerHTML = cache.usuarios.map(u=>`<tr>
+    <td><span class="mono">${u.usuario}</span></td>
+    <td>${u.nombre||'-'}</td>
+    <td>${badge(u.rol,'purple')}</td>
+    <td>${u.empresaId?empN(u.empresaId):'Todas'}</td>
+    <td>${badge(u.estado||'activo')}</td>
+    <td><div class="btn-group">
+      <button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button>
+      <button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})">Eliminar</button>
+    </div></td>
+  </tr>`).join('') || '<tr><td colspan="6" class="empty">Sin usuarios</td></tr>';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Modal helpers
+═══════════════════════════════════════════════════════════════ */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('open'); });
+});
+
+function switchTab(btn, paneId) {
+  const container = btn.closest('.tabs');
+  container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const modal = btn.closest('.modal');
+  modal.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(paneId).classList.add('active');
+}
+
+function v(id) { return (document.getElementById(id)||{}).value||''; }
+function sv(id, val) { const el=document.getElementById(id); if(el) el.value=val||''; }
+
+function calcVenc() {
+  const fc = v('aFechaCompra');
+  const g = parseInt(v('aGarantia'))||0;
+  if (fc && g) {
+    const d = new Date(fc); d.setMonth(d.getMonth()+g);
+    sv('aVencGarantia', d.toISOString().split('T')[0]);
+  }
+}
+
+document.getElementById('aFechaCompra').addEventListener('input', calcVenc);
+document.getElementById('aGarantia').addEventListener('input', calcVenc);
+
+/* ─── Accesorios ─── */
+function addAcc() {
+  const val = document.getElementById('newAcc').value.trim();
+  if (val) { accs.push(val); document.getElementById('newAcc').value=''; renderAccs(); }
+}
+function removeAcc(i) { accs.splice(i,1); renderAccs(); }
+function renderAccs() {
+  document.getElementById('accList').innerHTML = accs.map((a,i)=>`<span class="tag">${a} <span style="cursor:pointer" onclick="removeAcc(${i})">×</span></span>`).join('');
+}
+
+/* ─── Campos dinámicos por tipo ─── */
+function onCatChange() {
+  const catId = parseInt(v('aCategoria'));
+  const cat = cache.categorias.find(c=>c.id===catId);
+  const campos = document.getElementById('camposDin');
+  if (!cat) { campos.innerHTML=''; return; }
+  const MAP = {
+    tecnologico: ['Procesador','RAM','Almacenamiento','Sistema operativo','Tamaño de pantalla'],
+    mobiliario: ['Material','Dimensiones','Capacidad/asientos'],
+    gastronomico: ['Capacidad','Voltaje','BTU/Watts'],
+    vehiculo: ['Placa','Año','Cilindraje','Color']
+  };
+  const fs = MAP[cat.tipo]||[];
+  campos.innerHTML = fs.length
+    ? `<div style="font-size:11px;color:var(--text3);margin-bottom:8px">Campos específicos — ${cat.nombre}</div><div class="form-row">${fs.map(f=>`<div class="form-group"><label>${f}</label><input placeholder="${f}"></div>`).join('')}</div>`
+    : '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CRUD Modals — Activo
+═══════════════════════════════════════════════════════════════ */
+function openActivo(id) {
+  editingId.activo = id||null;
+  accs = [];
+  document.getElementById('mActivoTitle').textContent = id ? 'Editar activo' : 'Nuevo activo';
+  const fields = ['Codigo','Empresa','Categoria','Area','Desc','Marca','Modelo','Serie','Color','Costo','Condicion','Notas','FechaCompra','Proveedor','Factura','MontoFactura','Garantia','VencGarantia','VidaUtil','Espec'];
+  fields.forEach(f => sv('a'+f,''));
+  if (id) {
+    const a = cache.activos.find(x=>x.id==id);
+    if (a) {
+      sv('aCodigo',a.codigo); sv('aEmpresa',a.empresaId); sv('aCategoria',a.categoriaId);
+      sv('aArea',a.areaId||''); sv('aDesc',a.descripcion); sv('aMarca',a.marca||'');
+      sv('aModelo',a.modelo||''); sv('aSerie',a.serie||''); sv('aColor',a.color||'');
+      sv('aCosto',a.costo||''); sv('aCondicion',a.condicion||'nuevo'); sv('aNotas',a.notas||'');
+      sv('aFechaCompra',a.fechaCompra||''); sv('aProveedor',a.proveedor||'');
+      sv('aFactura',a.factura||''); sv('aMontoFactura',a.montoFactura||'');
+      sv('aGarantia',a.garantia||''); sv('aVencGarantia',a.vencGarantia||'');
+      sv('aVidaUtil',a.vidaUtil||''); sv('aEspec',a.especificaciones||'');
+      accs = [...(a.accesorios||[])];
+    }
+  }
+  renderAccs();
+  // reset tabs
+  document.querySelectorAll('#ovActivo .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.querySelectorAll('#ovActivo .tab-pane').forEach((p,i)=>p.classList.toggle('active',i===0));
+  openModal('ovActivo');
+}
+
+async function saveActivo() {
+  const codigo = v('aCodigo').trim();
+  const descripcion = v('aDesc').trim();
+  if (!codigo || !descripcion) { toast('Código y descripción son requeridos','warning'); return; }
+  const data = {
+    codigo, descripcion,
+    empresaId: parseInt(v('aEmpresa'))||0,
+    categoriaId: parseInt(v('aCategoria'))||0,
+    areaId: v('aArea')||null,
+    marca: v('aMarca'), modelo: v('aModelo'), serie: v('aSerie'), color: v('aColor'),
+    costo: parseFloat(v('aCosto'))||0,
+    condicion: v('aCondicion'), notas: v('aNotas'),
+    fechaCompra: v('aFechaCompra'), proveedor: v('aProveedor'),
+    factura: v('aFactura'), montoFactura: parseFloat(v('aMontoFactura'))||0,
+    garantia: parseInt(v('aGarantia'))||0, vencGarantia: v('aVencGarantia'),
+    vidaUtil: parseInt(v('aVidaUtil'))||0,
+    especificaciones: v('aEspec'), accesorios: [...accs], estado: 'activo'
+  };
+  let r;
+  if (editingId.activo) {
+    r = await PUT(`activos/${editingId.activo}`, data);
+    if (r && !r.error) {
+      await POST('historial', { tipo:'traslado', activoId:editingId.activo, empleadoId:null, fecha:today(), descripcion:'Activo actualizado', empresaId:data.empresaId });
+    }
+  } else {
+    r = await POST('activos', data);
+    if (r && !r.error) {
+      await POST('historial', { tipo:'alta', activoId:r.id, empleadoId:null, fecha:today(), descripcion:'Activo registrado en el sistema', empresaId:data.empresaId });
+    }
+  }
+  if (r && !r.error) {
+    closeModal('ovActivo');
+    await loadAll();
+    renderActivos();
+    toast('Activo guardado correctamente');
+  }
+}
+
+/* ─── Categoría ─── */
+function openCategoria(id) {
+  editingId.cat = id||null;
+  document.getElementById('mCatTitle').textContent = id ? 'Editar categoría' : 'Nueva categoría';
+  ['cNombre','cVidaUtil','cDep','cDesc'].forEach(f=>sv(f,''));
+  if (id) {
+    const c = cache.categorias.find(x=>x.id==id);
+    if (c) { sv('cNombre',c.nombre); sv('cTipo',c.tipo); sv('cVidaUtil',c.vidaUtil||''); sv('cDep',c.depreciacion||''); sv('cDesc',c.descripcion||''); }
+  }
+  openModal('ovCat');
+}
+async function saveCat() {
+  const nombre = v('cNombre').trim();
+  if (!nombre) { toast('El nombre es requerido','warning'); return; }
+  const data = { nombre, tipo:v('cTipo'), vidaUtil:parseInt(v('cVidaUtil'))||0, depreciacion:parseFloat(v('cDep'))||0, descripcion:v('cDesc') };
+  const r = editingId.cat ? await PUT(`categorias/${editingId.cat}`, data) : await POST('categorias', data);
+  if (r && !r.error) { closeModal('ovCat'); await loadAll(); renderCategorias(); toast('Categoría guardada'); }
+}
+
+/* ─── Empleado ─── */
+function openEmpleado(id) {
+  editingId.emp = id||null;
+  document.getElementById('mEmpTitle').textContent = id ? 'Editar empleado' : 'Nuevo empleado';
+  ['eNombre','eDUI','eCargo','eCorreo','eTel'].forEach(f=>sv(f,''));
+  if (id) {
+    const e = cache.empleados.find(x=>x.id==id);
+    if (e) { sv('eNombre',e.nombre); sv('eDUI',e.dui||''); sv('eCargo',e.cargo); sv('eArea',e.areaId||''); sv('eEmpresa',e.empresaId); sv('eCorreo',e.correo||''); sv('eTel',e.telefono||''); sv('eEstado',e.estado); }
+  }
+  openModal('ovEmp');
+}
+async function saveEmp() {
+  const nombre = v('eNombre').trim();
+  if (!nombre) { toast('El nombre es requerido','warning'); return; }
+  const data = { nombre, dui:v('eDUI'), cargo:v('eCargo'), areaId:v('eArea')||null, empresaId:parseInt(v('eEmpresa'))||0, correo:v('eCorreo'), telefono:v('eTel'), estado:v('eEstado') };
+  const r = editingId.emp ? await PUT(`empleados/${editingId.emp}`, data) : await POST('empleados', data);
+  if (r && !r.error) { closeModal('ovEmp'); await loadAll(); renderEmpleados(); toast('Empleado guardado'); }
+}
+
+/* ─── Área ─── */
+function openArea(id) {
+  editingId.area = id||null;
+  document.getElementById('mAreaTitle').textContent = id ? 'Editar área' : 'Nueva área';
+  ['arNombre','arDesc'].forEach(f=>sv(f,''));
+  if (id) {
+    const a = cache.areas.find(x=>x.id==id);
+    if (a) { sv('arNombre',a.nombre); sv('arEmpresa',a.empresaId); sv('arResp',a.responsable||''); sv('arDesc',a.descripcion||''); }
+  }
+  openModal('ovArea');
+}
+async function saveArea() {
+  const nombre = v('arNombre').trim();
+  if (!nombre) { toast('El nombre es requerido','warning'); return; }
+  const data = { nombre, empresaId:parseInt(v('arEmpresa'))||0, responsable:v('arResp')||null, descripcion:v('arDesc') };
+  const r = editingId.area ? await PUT(`areas/${editingId.area}`, data) : await POST('areas', data);
+  if (r && !r.error) { closeModal('ovArea'); await loadAll(); renderAreas(); toast('Área guardada'); }
+}
+
+/* ─── Empresa ─── */
+function openEmpresa(id) {
+  editingId.empresa = id||null;
+  document.getElementById('mEmpresaTitle').textContent = id ? 'Editar empresa' : 'Nueva empresa';
+  ['emNombre','emRUC','emContacto','emTel','emDir'].forEach(f=>sv(f,''));
+  if (id) {
+    const e = cache.empresas.find(x=>x.id==id);
+    if (e) { sv('emNombre',e.nombre); sv('emRUC',e.ruc||''); sv('emContacto',e.contacto||''); sv('emTel',e.tel||''); sv('emDir',e.direccion||''); }
+  }
+  openModal('ovEmpresa');
+}
+async function saveEmpresa() {
+  const nombre = v('emNombre').trim();
+  if (!nombre) { toast('El nombre es requerido','warning'); return; }
+  const data = { nombre, ruc:v('emRUC'), contacto:v('emContacto'), tel:v('emTel'), direccion:v('emDir') };
+  const r = editingId.empresa ? await PUT(`empresas/${editingId.empresa}`, data) : await POST('empresas', data);
+  if (r && !r.error) { closeModal('ovEmpresa'); await loadAll(); renderEmpresas(); toast('Empresa guardada'); }
+}
+
+/* ─── Asignación ─── */
+function openAsignacion(preActivoId) {
+  sv('asFecha', today());
+  ['asObs','asEntregadoPor'].forEach(f=>sv(f,''));
+  if (preActivoId) setTimeout(() => sv('asActivo', preActivoId), 50);
+  openModal('ovAsig');
+}
+async function saveAsig() {
+  const activoId = parseInt(v('asActivo'))||0;
+  const empleadoId = parseInt(v('asEmp'))||0;
+  const fecha = v('asFecha');
+  if (!activoId||!empleadoId||!fecha) { toast('Complete los campos requeridos','warning'); return; }
+  const data = { activoId, empleadoId, empresaUsoId:parseInt(v('asEmpUso'))||0, fecha, condicionEntrega:v('asCondicion'), entregadoPor:v('asEntregadoPor'), observaciones:v('asObs'), estado:'activo' };
+  const r = await POST('asignaciones', data);
+  if (r && !r.error) {
+    await POST('historial', { tipo:'asignacion', activoId, empleadoId, fecha, descripcion:`Asignado a ${empNm(empleadoId)} — Condición: ${data.condicionEntrega}`, empresaId:data.empresaUsoId });
+    closeModal('ovAsig'); await loadAll(); renderAsignaciones(); toast('Asignación registrada');
+  }
+}
+
+async function devolverActivo(asigId) {
+  const cond = prompt('Condición en que se recibe el equipo:', 'bueno');
+  if (cond === null) return;
+  const r = await POST('devolver', { asigId, condicion: cond });
+  if (r && r.ok) { await loadAll(); renderAsignaciones(); toast('Activo devuelto'); }
+}
+
+/* ─── Traslado ─── */
+function openTraslado() {
+  sv('trFecha', today());
+  ['trMotivo','trObs'].forEach(f=>sv(f,''));
+  document.getElementById('trInfoActual').textContent = 'Seleccione un activo para ver responsable actual.';
+  openModal('ovTraslado');
+}
+function onTrActivoChange() {
+  const id = parseInt(v('trActivo'));
+  const a = asigActual(id);
+  document.getElementById('trInfoActual').innerHTML = a
+    ? `Responsable actual: <strong>${empNm(a.empleadoId)}</strong> | Empresa: ${empN(a.empresaUsoId)}`
+    : 'Este activo no tiene responsable actualmente.';
+}
+async function saveTraslado() {
+  const activoId = parseInt(v('trActivo'))||0;
+  const aEmpleadoId = parseInt(v('trNuevoEmp'))||0;
+  const fecha = v('trFecha');
+  if (!activoId||!aEmpleadoId||!fecha) { toast('Complete los campos requeridos','warning'); return; }
+  const r = await POST('traslado-responsable', { activoId, aEmpleadoId, empresaDestinoId:parseInt(v('trEmpDest'))||0, condicionRecibe:v('trCondicion'), motivo:v('trMotivo'), observaciones:v('trObs'), fecha });
+  if (r && r.ok) { closeModal('ovTraslado'); await loadAll(); renderTraslados(); toast('Traslado registrado'); }
+}
+
+/* ─── Baja ─── */
+function openBaja(preActivoId) {
+  sv('baFecha', today());
+  ['baMotivo','baAutorizado','baReporte'].forEach(f=>sv(f,''));
+  if (preActivoId) setTimeout(() => sv('baActivo', preActivoId), 50);
+  openModal('ovBaja');
+}
+async function saveBaja() {
+  const activoId = parseInt(v('baActivo'))||0;
+  const fecha = v('baFecha');
+  if (!activoId||!fecha) { toast('Activo y fecha son requeridos','warning'); return; }
+  const r = await POST('dar-baja', { activoId, fecha, tipo:v('baTipo'), motivo:v('baMotivo'), autorizado:v('baAutorizado'), reporte:v('baReporte') });
+  if (r && r.ok) { closeModal('ovBaja'); await loadAll(); renderBajas(); renderActivos(); toast('Baja registrada'); }
+}
+
+/* ─── Usuario ─── */
+function openUsuario(id) {
+  editingId.user = id||null;
+  document.getElementById('mUserTitle').textContent = id ? 'Editar usuario' : 'Nuevo usuario';
+  ['uUser','uPass','uNombre'].forEach(f=>sv(f,''));
+  if (id) {
+    const u = cache.usuarios.find(x=>x.id==id);
+    if (u) { sv('uUser',u.usuario); sv('uNombre',u.nombre||''); sv('uRol',u.rol); sv('uEmpresa',u.empresaId||''); sv('uEstado',u.estado||'activo'); }
+  }
+  openModal('ovUser');
+}
+async function saveUser() {
+  const usuario = v('uUser').trim();
+  if (!usuario) { toast('El usuario es requerido','warning'); return; }
+  const data = { usuario, nombre:v('uNombre'), rol:v('uRol'), empresaId:v('uEmpresa')||'', estado:v('uEstado') };
+  const pass = v('uPass');
+  if (pass) data.password = pass;
+  const r = editingId.user ? await PUT(`usuarios/${editingId.user}`, data) : await POST('usuarios', {...data, password: pass||'changeme'});
+  if (r && !r.error) { closeModal('ovUser'); await loadAll(); renderUsuarios(); toast('Usuario guardado'); }
+}
+
+/* ─── Delete ─── */
+async function delRecord(tabla, id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  await DEL(`${tabla}/${id}`);
+  await loadAll();
+  toast('Registro eliminado');
+  renderPage(tabla === 'categorias' ? 'categorias' : tabla === 'empleados' ? 'empleados' : tabla === 'areas' ? 'areas' : tabla === 'empresas' ? 'empresas' : tabla === 'usuarios' ? 'usuarios' : 'dashboard');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Detalle activo
+═══════════════════════════════════════════════════════════════ */
+function verDetalle(id) {
+  currentDetalleId = id;
+  const a = cache.activos.find(x=>x.id==id);
+  if (!a) return;
+  const vu = a.vidaUtil||5;
+  const da = a.costo?(a.costo/vu):0;
+  const anos = a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0;
+  const dt = Math.min(anos*da, a.costo||0);
+  const va = Math.max((a.costo||0)-dt, 0);
+  const asig = asigActual(id);
+  const hist = cache.historial.filter(h=>h.activoId==id).slice(-8).reverse();
+  document.getElementById('mDetalleTitle').textContent = `${a.codigo} — ${a.descripcion}`;
+  document.getElementById('detalleContent').innerHTML = `
+    <div class="grid2" style="margin-bottom:16px">
+      <table style="font-size:13px"><tbody>
+        <tr><td style="color:var(--text3);padding:4px 0;padding-right:16px">Empresa:</td><td style="font-weight:500">${empN(a.empresaId)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Categoría:</td><td>${catN(a.categoriaId)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Marca/Modelo:</td><td>${a.marca||'-'} ${a.modelo||''}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Serie:</td><td class="mono">${a.serie||'-'}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Estado:</td><td>${badge(a.estado)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Condición:</td><td>${badge(a.condicion)}</td></tr>
+      </tbody></table>
+      <table style="font-size:13px"><tbody>
+        <tr><td style="color:var(--text3);padding:4px 0;padding-right:16px">Costo original:</td><td style="font-weight:500">$${(a.costo||0).toFixed(2)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Valor actual:</td><td style="color:var(--success);font-weight:500">$${va.toFixed(2)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Dep. acumulada:</td><td style="color:var(--danger)">$${dt.toFixed(2)}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Fecha compra:</td><td>${a.fechaCompra||'-'}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Proveedor:</td><td>${a.proveedor||'-'}</td></tr>
+        <tr><td style="color:var(--text3);padding:4px 0">Garantía vence:</td><td>${a.vencGarantia?badge(a.vencGarantia,new Date(a.vencGarantia)<new Date()?'red':'amber'):'-'}</td></tr>
+      </tbody></table>
+    </div>
+    ${asig?`<div class="alert alert-success" style="margin-bottom:12px"><strong>Responsable:</strong> ${empNm(asig.empleadoId)} | Empresa: ${empN(asig.empresaUsoId)} | Desde: ${asig.fecha} | Condición entrega: ${asig.condicionEntrega}</div>`:`<div class="alert alert-warning" style="margin-bottom:12px">Sin responsable asignado — en bodega</div>`}
+    ${a.accesorios&&a.accesorios.length?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text3);margin-bottom:6px">ACCESORIOS</div>${a.accesorios.map(x=>`<span class="tag">${x}</span>`).join('')}</div>`:''}
+    ${a.especificaciones?`<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">ESPECIFICACIONES</div><div style="font-size:13px">${a.especificaciones}</div></div>`:''}
+    <div><div style="font-size:11px;color:var(--text3);margin-bottom:8px">HISTORIAL RECIENTE</div>
+    ${hist.map(h=>`<div class="history-item"><div class="history-dot" style="background:${{alta:'#533ab7',asignacion:'#3b6d11',traslado:'#185fa5',devolucion:'#854f0b',baja:'#a32d2d'}[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between">${tipoBadge(h.tipo)}<span style="font-size:11px;color:var(--text3)">${h.fecha}</span></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join('')||'<div style="color:var(--text3);font-size:13px">Sin historial</div>'}
+    </div>`;
+  openModal('ovDetalle');
+}
+
+function editFromDetalle() { closeModal('ovDetalle'); openActivo(currentDetalleId); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Expediente
+═══════════════════════════════════════════════════════════════ */
+function verExpediente(empId) {
+  const emp = cache.empleados.find(x=>x.id==empId);
+  if (!emp) return;
+  const asigs = cache.asignaciones.filter(a=>a.empleadoId==empId);
+  const activas = asigs.filter(a=>a.estado==='activo');
+  const html = `
+    <div style="font-size:13px;margin-bottom:12px"><strong>${emp.nombre}</strong> | ${emp.cargo} | ${areaN(emp.areaId)} | ${empN(emp.empresaId)}${emp.dui?` | DUI: ${emp.dui}`:''}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">ACTIVOS ASIGNADOS ACTUALMENTE (${activas.length})</div>
+    ${activas.length?`<table><thead><tr><th>Activo</th><th>Fecha asignación</th><th>Empresa</th><th>Condición</th></tr></thead><tbody>${activas.map(a=>{const act=cache.activos.find(x=>x.id==a.activoId);return`<tr><td>${act?`${act.codigo} — ${act.descripcion}`:'-'}</td><td>${a.fecha}</td><td>${empN(a.empresaUsoId)}</td><td>${badge(a.condicionEntrega)}</td></tr>`}).join('')}</tbody></table>`:`<div style="color:var(--text3);font-size:13px;margin-bottom:12px">Sin activos asignados actualmente.</div>`}
+    <div style="font-size:11px;color:var(--text3);margin-top:16px;margin-bottom:8px">HISTORIAL COMPLETO</div>
+    ${asigs.map(a=>{const act=cache.activos.find(x=>x.id==a.activoId);return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--border);font-size:13px"><span>${act?`${act.codigo} — ${act.descripcion}`:'-'}</span><span style="color:var(--text2)">${a.fecha} → ${a.fechaDevolucion||'Activo'}</span>${badge(a.estado)}</div>`}).join('')||'<div style="color:var(--text3);font-size:13px">Sin historial</div>'}
+    <div style="margin-top:20px;padding:12px;border:0.5px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text3)"><strong>Nota de responsabilidad:</strong> Cualquier daño, extravío o mal uso de los equipos asignados será de responsabilidad del empleado, quien deberá cubrir el costo de reposición o reparación según las políticas internas de la empresa.</div>`;
+
+  // Reuse detalle modal for expediente display
+  document.getElementById('mDetalleTitle').textContent = 'Expediente: ' + emp.nombre;
+  document.getElementById('detalleContent').innerHTML = html;
+  document.querySelector('#ovDetalle .form-actions .btn-primary').setAttribute('onclick','printPage()');
+  document.querySelector('#ovDetalle .form-actions .btn-primary').textContent = 'Imprimir';
+  openModal('ovDetalle');
+}
+
+function printPage() { window.print(); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Reportes / Impresión
+═══════════════════════════════════════════════════════════════ */
+function openPrintWindow(html) {
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+const printCSS = `<style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:32px}h1{font-size:18px;text-align:center;margin-bottom:4px}.sub{text-align:center;color:#555;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}th{background:#f0f0f0}.warn{background:#fff3cd;border:1px solid #ffc107;padding:10px;border-radius:4px;margin:12px 0;font-size:11px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}.sig-box{border-top:1px solid #333;padding-top:4px;margin-top:40px;text-align:center;font-size:11px}</style>`;
+
+function printHoja() {
+  const empId = parseInt(document.getElementById('rptEmp').value)||0;
+  if (!empId) { toast('Seleccione un empleado','warning'); return; }
+  printHojaEmp(empId);
+}
+
+function printHojaById(asigId) {
+  const a = cache.asignaciones.find(x=>x.id==asigId);
+  if (a) printHojaEmp(a.empleadoId);
+}
+
+function printHojaEmp(empId) {
+  const emp = cache.empleados.find(x=>x.id==empId);
+  if (!emp) return;
+  const activas = cache.asignaciones.filter(a=>a.empleadoId==empId&&a.estado==='activo');
+  const empresa = cache.empresas.find(x=>x.id==emp.empresaId)||{};
+  openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hoja de Entrega</title>${printCSS}</head><body>
+    <h1>${empresa.nombre||'Empresa'}</h1>
+    <div class="sub">CONSTANCIA DE ENTREGA DE EQUIPO Y ACTIVOS FIJOS</div>
+    <table><tbody>
+      <tr><td><strong>Empleado:</strong> ${emp.nombre}</td><td><strong>DUI:</strong> ${emp.dui||'-'}</td></tr>
+      <tr><td><strong>Cargo:</strong> ${emp.cargo}</td><td><strong>Área:</strong> ${areaN(emp.areaId)}</td></tr>
+      <tr><td><strong>Empresa:</strong> ${empN(emp.empresaId)}</td><td><strong>Fecha:</strong> ${today()}</td></tr>
+    </tbody></table>
+    <p style="margin:10px 0">Por medio de la presente se hace constar que se hace entrega al colaborador los siguientes activos:</p>
+    <table><thead><tr><th>Código</th><th>Descripción</th><th>Marca/Modelo</th><th>No. Serie</th><th>Condición</th><th>Accesorios</th></tr></thead><tbody>
+    ${activas.map(a=>{const act=cache.activos.find(x=>x.id==a.activoId);return act?`<tr><td>${act.codigo}</td><td>${act.descripcion}</td><td>${act.marca||''} ${act.modelo||''}</td><td>${act.serie||'-'}</td><td>${a.condicionEntrega}</td><td>${(act.accesorios||[]).join(', ')||'-'}</td></tr>`:''}).join('')}
+    </tbody></table>
+    <div class="warn">⚠ RESPONSABILIDAD DEL COLABORADOR: Cualquier daño, mal uso, extravío o deterioro por negligencia de los activos descritos en este documento será responsabilidad exclusiva del empleado, quien deberá cubrir el costo total de reposición o reparación según el valor residual del activo al momento del incidente, de conformidad con las políticas internas de la empresa y la legislación laboral vigente. El empleado se compromete a hacer buen uso de los recursos asignados y a reportar cualquier incidencia de manera inmediata al área correspondiente.</div>
+    <div class="sig">
+      <div><div class="sig-box">Firma del empleado<br>${emp.nombre}<br>DUI: ${emp.dui||'_______________'}</div></div>
+      <div><div class="sig-box">Entregado por / Autorizado por<br>Nombre: _______________<br>Cargo: _______________</div></div>
+    </div>
+  </body></html>`);
+}
+
+function printContabilidad() {
+  const empId = document.getElementById('rptEmpresa').value;
+  const anio = document.getElementById('rptAnio').value;
+  const list = cache.activos.filter(a => !empId || String(a.empresaId)===empId);
+  const empresa = empId ? (cache.empresas.find(x=>String(x.id)===empId)||{}).nombre : 'TODAS LAS EMPRESAS';
+  let totalCosto=0, totalDepr=0, totalValor=0;
+  const rows = list.map(a => {
+    const vu=a.vidaUtil||5; const da=(a.costo||0)/vu;
+    const anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0;
+    const dt=Math.min(anos*da,a.costo||0); const va=Math.max((a.costo||0)-dt,0);
+    totalCosto+=a.costo||0; totalDepr+=dt; totalValor+=va;
+    return `<tr><td>${a.codigo}</td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${a.fechaCompra||'-'}</td><td>${vu} años</td><td>$${da.toFixed(2)}</td><td>$${dt.toFixed(2)}</td><td>$${va.toFixed(2)}</td></tr>`;
+  }).join('');
+  openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe Contabilidad ${anio}</title>${printCSS}</head><body>
+    <h1>${empresa}</h1>
+    <div class="sub">INFORME ANUAL DE ACTIVOS FIJOS — AÑO ${anio}</div>
+    <table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Costo orig.</th><th>Fecha compra</th><th>Vida útil</th><th>Dep. anual</th><th>Dep. acum.</th><th>Valor actual</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr style="font-weight:bold;background:#f9f9f9"><td colspan="3">TOTALES</td><td>$${totalCosto.toFixed(2)}</td><td colspan="3"></td><td>$${totalDepr.toFixed(2)}</td><td>$${totalValor.toFixed(2)}</td></tr></tfoot></table>
+    <p style="margin-top:16px;font-size:10px;color:#888">Generado el ${today()} — Sistema de Control de Activo Fijo</p>
+  </body></html>`);
+}
+
+function printExpediente() {
+  const empId = parseInt(document.getElementById('rptExpEmp').value)||0;
+  if (!empId) { toast('Seleccione un empleado','warning'); return; }
+  verExpediente(empId);
+}
+
+function printInventario() {
+  const empId = document.getElementById('rptInvEmp').value;
+  const list = cache.activos.filter(a => !empId || String(a.empresaId)===empId);
+  const empresa = empId ? (cache.empresas.find(x=>String(x.id)===empId)||{}).nombre : 'INVENTARIO GENERAL';
+  openPrintWindow(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Inventario</title>${printCSS}</head><body>
+    <h1>${empresa}</h1>
+    <div class="sub">INVENTARIO DE ACTIVOS FIJOS — ${today()}</div>
+    <table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Estado</th><th>Responsable</th><th>Empresa propietaria</th><th>En uso por</th><th>Costo</th></tr></thead><tbody>
+    ${list.map(a=>{const asig=asigActual(a.id);return`<tr><td>${a.codigo}</td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${a.estado}</td><td>${asig?empNm(asig.empleadoId):'En bodega'}</td><td>${empN(a.empresaId)}</td><td>${asig?empN(asig.empresaUsoId):'-'}</td><td>$${(a.costo||0).toFixed(2)}</td></tr>`}).join('')}
+    </tbody></table>
+  </body></html>`);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Toast
+═══════════════════════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='warning' ? 'var(--warning)' : type==='danger' ? 'var(--danger)' : 'var(--text)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Init — check session
+═══════════════════════════════════════════════════════════════ */
+(async () => {
+  const r = await fetch('/api/me', { credentials: 'include' }).then(r=>r.json()).catch(()=>null);
+  if (r && r.id) {
+    currentUser = r;
+    showApp();
+  }
+})();
+</script>
+</body>
+</html>
