@@ -1331,11 +1331,26 @@ function openUsuario(id) {
 async function saveUser() {
   const usuario = v('uUser').trim();
   if (!usuario) { toast('El usuario es requerido','warning'); return; }
+  const pass = v('uPass').trim();
+  // Al editar: contraseña es opcional. Al crear: contraseña requerida
+  if (!editingId.user && !pass) { toast('La contraseña es requerida para nuevos usuarios','warning'); return; }
   const data = { usuario, nombre:v('uNombre'), rol:v('uRol'), empresaId:v('uEmpresa')||'', estado:v('uEstado') };
-  const pass = v('uPass');
   if (pass) data.password = pass;
-  const r = editingId.user ? await PUT(`usuarios/${editingId.user}`, data) : await POST('usuarios', {...data, password: pass||'changeme'});
-  if (r && !r.error) { closeModal('ovUser'); await loadAll(); renderUsuarios(); toast('Usuario guardado'); }
+  try {
+    const r = editingId.user
+      ? await PUT('usuarios/'+editingId.user, data)
+      : await POST('usuarios', {...data, password: pass});
+    if (r && !r.error) {
+      closeModal('ovUser');
+      await loadAll();
+      renderUsuarios();
+      toast('Usuario guardado correctamente');
+    } else {
+      toast('Error al guardar: ' + (r && r.error ? r.error : 'intente de nuevo'), 'warning');
+    }
+  } catch(e) {
+    toast('Error de conexión, intente de nuevo', 'danger');
+  }
 }
 
 /* ─── Delete ─── */
