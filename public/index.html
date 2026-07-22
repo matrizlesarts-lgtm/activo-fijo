@@ -1332,7 +1332,6 @@ async function saveUser() {
   const usuario = v('uUser').trim();
   if (!usuario) { toast('El usuario es requerido','warning'); return; }
   const pass = v('uPass').trim();
-  // Al editar: contraseña es opcional. Al crear: contraseña requerida
   if (!editingId.user && !pass) { toast('La contraseña es requerida para nuevos usuarios','warning'); return; }
   const data = { usuario, nombre:v('uNombre'), rol:v('uRol'), empresaId:v('uEmpresa')||'', estado:v('uEstado') };
   if (pass) data.password = pass;
