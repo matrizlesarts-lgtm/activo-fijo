@@ -131,7 +131,7 @@ function requireAuth(req, res) {
 
 // ── CRUD genérico ─────────────────────────────────────────────────────────────
 function crudHandler(tabla, req, res, parts) {
-  const id = parts[3] ? parseInt(parts[3]) : null;
+  const id = parts[2] ? parseInt(parts[2]) : null;
 
   if (req.method === 'GET') {
     if (id) {
