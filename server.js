@@ -1,6 +1,7 @@
 /**
- * Control de Activo Fijo — Servidor Express + SQLite
- * Ejecutar: node server.js  (puerto 3000 por defecto, o PORT env)
+ * Control de Activo Fijo — Servidor Express
+ * Compatible con Railway (Volume persistente en /volume/data)
+ * También funciona en local (guarda en ./data)
  */
 
 const http = require('http');
@@ -8,24 +9,34 @@ const fs   = require('fs');
 const path = require('path');
 const url  = require('url');
 
-// ── Base de datos SQLite pura en JavaScript (no requiere módulos externos) ──
-// Usamos un archivo JSON como almacén simple para máxima portabilidad.
-// Si quieres usar SQLite real, instala better-sqlite3 y cambia el motor abajo.
+// ── Ruta de datos: Railway monta el volume en /volume, localmente usa ./data ──
+const DATA_DIR  = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'data')
+  : path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'db.json');
 
-const DATA_FILE = path.join(__dirname, 'data', 'db.json');
+console.log('📁 Directorio de datos:', DATA_DIR);
 
+// ── Base de datos JSON ────────────────────────────────────────────────────────
 function loadDB() {
   try {
     if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      const raw = fs.readFileSync(DATA_FILE, 'utf8');
+      return JSON.parse(raw);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Error leyendo db.json:', e.message);
+  }
   return initDB();
 }
 
 function saveDB(db) {
-  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
+  } catch (e) {
+    console.error('Error guardando db.json:', e.message);
+  }
 }
 
 function initDB() {
@@ -70,11 +81,11 @@ function initDB() {
     bajas: [],
     historial: [
       { id: 1, tipo: 'alta', activoId: 1, empleadoId: null, fecha: '2024-01-15', descripcion: 'Activo registrado en el sistema', empresaId: 1 },
-      { id: 2, tipo: 'asignacion', activoId: 1, empleadoId: 1, fecha: '2024-01-20', descripcion: 'Asignado a Juan Carlos Ramos - Condición: Bueno', empresaId: 1 },
+      { id: 2, tipo: 'asignacion', activoId: 1, empleadoId: 1, fecha: '2024-01-20', descripcion: 'Asignado a Juan Carlos Ramos', empresaId: 1 },
       { id: 3, tipo: 'alta', activoId: 2, empleadoId: null, fecha: '2024-03-01', descripcion: 'Activo registrado en el sistema', empresaId: 1 },
-      { id: 4, tipo: 'asignacion', activoId: 2, empleadoId: 1, fecha: '2024-03-05', descripcion: 'Asignado a Juan Carlos Ramos - Condición: Nuevo', empresaId: 1 },
+      { id: 4, tipo: 'asignacion', activoId: 2, empleadoId: 1, fecha: '2024-03-05', descripcion: 'Asignado a Juan Carlos Ramos', empresaId: 1 },
       { id: 5, tipo: 'alta', activoId: 3, empleadoId: null, fecha: '2024-06-01', descripcion: 'Activo registrado en el sistema', empresaId: 2 },
-      { id: 6, tipo: 'asignacion', activoId: 3, empleadoId: 3, fecha: '2024-06-10', descripcion: 'Asignado a Roberto Fuentes - Condición: Nuevo', empresaId: 2 }
+      { id: 6, tipo: 'asignacion', activoId: 3, empleadoId: 3, fecha: '2024-06-10', descripcion: 'Asignado a Roberto Fuentes', empresaId: 2 }
     ],
     usuarios: [
       { id: 1, usuario: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'admin', empresaId: '', estado: 'activo' }
@@ -83,94 +94,80 @@ function initDB() {
   };
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 let db = loadDB();
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function nextId(arr) {
   return (arr.length === 0 ? 0 : Math.max(...arr.map(x => x.id))) + 1;
 }
-
 function today() {
   return new Date().toISOString().split('T')[0];
 }
-
-function jsonResponse(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+function jsonRes(res, status, data) {
+  res.writeHead(status, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*'
+  });
   res.end(JSON.stringify(data));
 }
-
 function parseBody(req) {
-  return new Promise((resolve) => {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      try { resolve(JSON.parse(body)); } catch { resolve({}); }
-    });
+  return new Promise(resolve => {
+    let b = '';
+    req.on('data', c => b += c);
+    req.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve({}); } });
   });
 }
-
 function getSession(req) {
   const cookie = req.headers.cookie || '';
-  const match = cookie.match(/session=([^;]+)/);
-  if (!match) return null;
-  return db.sesiones[match[1]] || null;
+  const m = cookie.match(/session=([^;]+)/);
+  if (!m) return null;
+  return db.sesiones[m[1]] || null;
 }
-
 function requireAuth(req, res) {
-  const sess = getSession(req);
-  if (!sess) {
-    jsonResponse(res, 401, { error: 'No autenticado' });
-    return false;
-  }
-  return sess;
+  const s = getSession(req);
+  if (!s) { jsonRes(res, 401, { error: 'No autenticado' }); return false; }
+  return s;
 }
 
 // ── CRUD genérico ─────────────────────────────────────────────────────────────
-
-function crudHandler(tabla, req, res, pathParts) {
-  const id = pathParts[3] ? parseInt(pathParts[3]) : null;
+function crudHandler(tabla, req, res, parts) {
+  const id = parts[3] ? parseInt(parts[3]) : null;
 
   if (req.method === 'GET') {
     if (id) {
       const item = db[tabla].find(x => x.id === id);
-      return item ? jsonResponse(res, 200, item) : jsonResponse(res, 404, { error: 'No encontrado' });
+      return item ? jsonRes(res, 200, item) : jsonRes(res, 404, { error: 'No encontrado' });
     }
-    return jsonResponse(res, 200, db[tabla]);
+    return jsonRes(res, 200, db[tabla]);
   }
-
   if (req.method === 'POST') {
     return parseBody(req).then(body => {
       body.id = nextId(db[tabla]);
       db[tabla].push(body);
       saveDB(db);
-      jsonResponse(res, 201, body);
+      jsonRes(res, 201, body);
     });
   }
-
   if (req.method === 'PUT' && id) {
     return parseBody(req).then(body => {
       const i = db[tabla].findIndex(x => x.id === id);
-      if (i < 0) return jsonResponse(res, 404, { error: 'No encontrado' });
+      if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' });
       db[tabla][i] = { ...db[tabla][i], ...body, id };
       saveDB(db);
-      jsonResponse(res, 200, db[tabla][i]);
+      jsonRes(res, 200, db[tabla][i]);
     });
   }
-
   if (req.method === 'DELETE' && id) {
     const i = db[tabla].findIndex(x => x.id === id);
-    if (i < 0) return jsonResponse(res, 404, { error: 'No encontrado' });
+    if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' });
     db[tabla].splice(i, 1);
     saveDB(db);
-    return jsonResponse(res, 200, { ok: true });
+    return jsonRes(res, 200, { ok: true });
   }
-
-  jsonResponse(res, 405, { error: 'Método no permitido' });
+  jsonRes(res, 405, { error: 'Método no permitido' });
 }
 
-// ── Servidor HTTP ─────────────────────────────────────────────────────────────
-
+// ── Tipos MIME ────────────────────────────────────────────────────────────────
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css':  'text/css',
@@ -179,11 +176,10 @@ const MIME = {
   '.ico':  'image/x-icon',
   '.png':  'image/png',
   '.svg':  'image/svg+xml',
-  '.woff2':'font/woff2',
 };
 
+// ── Servidor HTTP ─────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -193,18 +189,22 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  const parsed = url.parse(req.url, true);
+  const parsed  = url.parse(req.url, true);
   const pathname = parsed.pathname;
-  const parts = pathname.split('/').filter(Boolean);
+  const parts   = pathname.split('/').filter(Boolean);
 
   // ── API ───────────────────────────────────────────────────────────────────
-
   if (parts[0] === 'api') {
+
     // Login
     if (parts[1] === 'login' && req.method === 'POST') {
       const body = await parseBody(req);
-      const user = db.usuarios.find(u => u.usuario === body.usuario && u.password === body.password && u.estado === 'activo');
-      if (!user) return jsonResponse(res, 401, { error: 'Credenciales incorrectas' });
+      const user = db.usuarios.find(u =>
+        u.usuario === body.usuario &&
+        u.password === body.password &&
+        u.estado === 'activo'
+      );
+      if (!user) return jsonRes(res, 401, { error: 'Credenciales incorrectas' });
       const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
       db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       saveDB(db);
@@ -213,14 +213,17 @@ const server = http.createServer(async (req, res) => {
         'Set-Cookie': `session=${token}; HttpOnly; Path=/; SameSite=Lax`,
         'Access-Control-Allow-Origin': '*'
       });
-      return res.end(JSON.stringify({ ok: true, user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } }));
+      return res.end(JSON.stringify({
+        ok: true,
+        user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }
+      }));
     }
 
     // Logout
     if (parts[1] === 'logout' && req.method === 'POST') {
       const cookie = req.headers.cookie || '';
-      const match = cookie.match(/session=([^;]+)/);
-      if (match) { delete db.sesiones[match[1]]; saveDB(db); }
+      const m = cookie.match(/session=([^;]+)/);
+      if (m) { delete db.sesiones[m[1]]; saveDB(db); }
       res.writeHead(200, { 'Set-Cookie': 'session=; Max-Age=0; Path=/', 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ ok: true }));
     }
@@ -228,24 +231,31 @@ const server = http.createServer(async (req, res) => {
     // Whoami
     if (parts[1] === 'me' && req.method === 'GET') {
       const sess = getSession(req);
-      if (!sess) return jsonResponse(res, 401, { error: 'No autenticado' });
+      if (!sess) return jsonRes(res, 401, { error: 'No autenticado' });
       const user = db.usuarios.find(u => u.id === sess.userId);
-      return jsonResponse(res, 200, user ? { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } : { error: 'Usuario no encontrado' });
+      return jsonRes(res, 200, user
+        ? { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }
+        : { error: 'No encontrado' }
+      );
     }
 
-    // Auth guard para el resto
+    // Health check para Railway
+    if (parts[1] === 'health' && req.method === 'GET') {
+      return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
+    }
+
+    // Auth guard
     if (!requireAuth(req, res)) return;
 
-    // Tablas CRUD estándar
-    const tablas = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios'];
-    if (tablas.includes(parts[1])) {
+    // Tablas CRUD
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios'];
+    if (TABLAS.includes(parts[1])) {
       return crudHandler(parts[1], req, res, parts);
     }
 
-    // Acción especial: traslado de responsable
+    // Traslado de responsable
     if (parts[1] === 'traslado-responsable' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const { activoId, aEmpleadoId, empresaDestinoId, condicionRecibe, motivo, observaciones, fecha } = body;
+      const { activoId, aEmpleadoId, empresaDestinoId, condicionRecibe, motivo, observaciones, fecha } = await parseBody(req);
       const asigActual = db.asignaciones.filter(a => a.activoId === activoId && a.estado === 'activo').slice(-1)[0];
       const deEmpleadoId = asigActual ? asigActual.empleadoId : null;
       if (asigActual) {
@@ -253,21 +263,33 @@ const server = http.createServer(async (req, res) => {
         db.asignaciones[i].estado = 'trasladado';
         db.asignaciones[i].fechaDevolucion = fecha;
       }
-      const nuevaAsig = { id: nextId(db.asignaciones), activoId, empleadoId: aEmpleadoId, empresaUsoId: empresaDestinoId, fecha, condicionEntrega: condicionRecibe, entregadoPor: deEmpleadoId ? (db.empleados.find(e => e.id === deEmpleadoId) || {}).nombre || '' : '', observaciones: observaciones || '', estado: 'activo' };
+      const nuevaAsig = {
+        id: nextId(db.asignaciones), activoId, empleadoId: aEmpleadoId,
+        empresaUsoId: empresaDestinoId, fecha, condicionEntrega: condicionRecibe,
+        entregadoPor: deEmpleadoId ? (db.empleados.find(e => e.id === deEmpleadoId) || {}).nombre || '' : '',
+        observaciones: observaciones || '', estado: 'activo'
+      };
       db.asignaciones.push(nuevaAsig);
-      const traslado = { id: nextId(db.traslados), activoId, deEmpleadoId, aEmpleadoId, empresaDestinoId, fecha, condicionRecibe, motivo: motivo || '', observaciones: observaciones || '' };
+      const traslado = {
+        id: nextId(db.traslados), activoId, deEmpleadoId, aEmpleadoId,
+        empresaDestinoId, fecha, condicionRecibe, motivo: motivo || '', observaciones: observaciones || ''
+      };
       db.traslados.push(traslado);
       const empDe = db.empleados.find(e => e.id === deEmpleadoId);
-      const empA = db.empleados.find(e => e.id === aEmpleadoId);
-      db.historial.push({ id: nextId(db.historial), tipo: 'traslado', activoId, empleadoId: aEmpleadoId, fecha, descripcion: `Trasladado de ${empDe ? empDe.nombre : 'sin asignar'} a ${empA ? empA.nombre : '?'} (${(db.empresas.find(e => e.id === empresaDestinoId) || {}).nombre || ''}) — Condición: ${condicionRecibe}`, empresaId: empresaDestinoId });
+      const empA  = db.empleados.find(e => e.id === aEmpleadoId);
+      const empEm = db.empresas.find(e => e.id === empresaDestinoId);
+      db.historial.push({
+        id: nextId(db.historial), tipo: 'traslado', activoId, empleadoId: aEmpleadoId, fecha,
+        descripcion: `Trasladado de ${empDe ? empDe.nombre : 'sin asignar'} a ${empA ? empA.nombre : '?'} (${empEm ? empEm.nombre : ''}) — Condición: ${condicionRecibe}`,
+        empresaId: empresaDestinoId
+      });
       saveDB(db);
-      return jsonResponse(res, 200, { ok: true, traslado, asignacion: nuevaAsig });
+      return jsonRes(res, 200, { ok: true, traslado, asignacion: nuevaAsig });
     }
 
-    // Acción especial: dar de baja activo
+    // Dar de baja
     if (parts[1] === 'dar-baja' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const { activoId, fecha, tipo, motivo, autorizado, reporte } = body;
+      const { activoId, fecha, tipo, motivo, autorizado, reporte } = await parseBody(req);
       const baja = { id: nextId(db.bajas), activoId, fecha, tipo, motivo: motivo || '', autorizado: autorizado || '', reporte: reporte || '' };
       db.bajas.push(baja);
       const ai = db.activos.findIndex(x => x.id === activoId);
@@ -277,47 +299,50 @@ const server = http.createServer(async (req, res) => {
         const i = db.asignaciones.findIndex(x => x.id === asigActual.id);
         db.asignaciones[i].estado = 'baja';
       }
-      db.historial.push({ id: nextId(db.historial), tipo: 'baja', activoId, empleadoId: null, fecha, descripcion: `Baja registrada: ${tipo} — ${motivo || 'Sin descripción'}`, empresaId: db.activos[ai]?.empresaId || 0 });
+      db.historial.push({
+        id: nextId(db.historial), tipo: 'baja', activoId, empleadoId: null, fecha,
+        descripcion: `Baja: ${tipo} — ${motivo || 'Sin descripción'}`,
+        empresaId: db.activos[ai]?.empresaId || 0
+      });
       saveDB(db);
-      return jsonResponse(res, 200, { ok: true, baja });
+      return jsonRes(res, 200, { ok: true, baja });
     }
 
     // Devolver activo
     if (parts[1] === 'devolver' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const { asigId, condicion } = body;
+      const { asigId, condicion } = await parseBody(req);
       const i = db.asignaciones.findIndex(x => x.id === asigId);
-      if (i < 0) return jsonResponse(res, 404, { error: 'No encontrada' });
+      if (i < 0) return jsonRes(res, 404, { error: 'No encontrada' });
       const a = db.asignaciones[i];
-      db.asignaciones[i].estado = 'devuelto';
-      db.asignaciones[i].condicionDevolucion = condicion;
-      db.asignaciones[i].fechaDevolucion = today();
-      db.historial.push({ id: nextId(db.historial), tipo: 'devolucion', activoId: a.activoId, empleadoId: a.empleadoId, fecha: today(), descripcion: `Devuelto por ${(db.empleados.find(e => e.id === a.empleadoId) || {}).nombre || '?'} — Condición recibida: ${condicion}`, empresaId: a.empresaUsoId });
+      db.asignaciones[i] = { ...a, estado: 'devuelto', condicionDevolucion: condicion, fechaDevolucion: today() };
+      db.historial.push({
+        id: nextId(db.historial), tipo: 'devolucion', activoId: a.activoId, empleadoId: a.empleadoId, fecha: today(),
+        descripcion: `Devuelto por ${(db.empleados.find(e => e.id === a.empleadoId) || {}).nombre || '?'} — Condición: ${condicion}`,
+        empresaId: a.empresaUsoId
+      });
       saveDB(db);
-      return jsonResponse(res, 200, { ok: true });
+      return jsonRes(res, 200, { ok: true });
     }
 
     // Stats dashboard
     if (parts[1] === 'stats' && req.method === 'GET') {
-      const total = db.activos.length;
-      const activos = db.activos.filter(a => a.estado === 'activo');
+      const total    = db.activos.length;
+      const activos  = db.activos.filter(a => a.estado === 'activo');
       const asignados = activos.filter(a => db.asignaciones.some(x => x.activoId === a.id && x.estado === 'activo')).length;
-      const bodega = activos.length - asignados;
-      const bajas = db.activos.filter(a => a.estado === 'baja').length;
-      return jsonResponse(res, 200, { total, asignados, bodega, bajas });
+      const bodega   = activos.length - asignados;
+      const bajas    = db.activos.filter(a => a.estado === 'baja').length;
+      return jsonRes(res, 200, { total, asignados, bodega, bajas });
     }
 
-    return jsonResponse(res, 404, { error: 'Ruta no encontrada' });
+    return jsonRes(res, 404, { error: 'Ruta no encontrada' });
   }
 
-  // ── Archivos estáticos ────────────────────────────────────────────────────
-
+  // ── Archivos estáticos ─────────────────────────────────────────────────────
   let filePath = pathname === '/' ? '/index.html' : pathname;
   filePath = path.join(__dirname, 'public', filePath);
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      // SPA fallback → index.html
       fs.readFile(path.join(__dirname, 'public', 'index.html'), (e2, html) => {
         if (e2) { res.writeHead(404); return res.end('Not found'); }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -332,7 +357,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`\n✅ Control de Activo Fijo corriendo en http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✅ Control de Activo Fijo corriendo en http://0.0.0.0:${PORT}`);
+  console.log(`   Datos en: ${DATA_FILE}`);
   console.log(`   Usuario: admin  |  Contraseña: admin123\n`);
 });
