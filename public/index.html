@@ -810,6 +810,7 @@ function renderActivos() {
           <button class="btn btn-sm" onclick="verDetalle(${a.id})">Ver</button>
           <button class="btn btn-sm" onclick="openActivo(${a.id})">Editar</button>
           <button class="btn btn-sm btn-danger" onclick="openBaja(${a.id})">Baja</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})" title="Eliminar permanentemente">🗑</button>
         </div></td>
       </tr>`).join('')
     : '<tr><td colspan="8" class="empty">Sin activos registrados</td></tr>';
@@ -935,6 +936,7 @@ function renderAsignaciones() {
         <td><div class="btn-group">
           <button class="btn btn-sm" onclick="printHojaById(${a.id})">Imprimir</button>
           ${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})">Devolver</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="eliminarAsignacion(${a.id})" title="Eliminar registro">🗑</button>
         </div></td>
       </tr>`).join('')
     : '<tr><td colspan="7" class="empty">Sin asignaciones</td></tr>';
@@ -1353,6 +1355,25 @@ async function saveUser() {
 }
 
 /* ─── Delete ─── */
+async function eliminarActivo(id) {
+  if (!confirm('¿Eliminar este activo permanentemente? Esta acción no se puede deshacer.')) return;
+  await DEL('activos/' + id);
+  // también eliminar sus asignaciones relacionadas
+  const asigIds = cache.asignaciones.filter(a => a.activoId == id).map(a => a.id);
+  for (const aid of asigIds) await DEL('asignaciones/' + aid);
+  await loadAll();
+  renderActivos();
+  toast('Activo eliminado');
+}
+
+async function eliminarAsignacion(id) {
+  if (!confirm('¿Eliminar este registro de asignación? Los datos del activo no se borran.')) return;
+  await DEL('asignaciones/' + id);
+  await loadAll();
+  renderAsignaciones();
+  toast('Asignación eliminada');
+}
+
 async function delRecord(tabla, id) {
   if (!confirm('¿Eliminar este registro?')) return;
   await DEL(`${tabla}/${id}`);
