@@ -122,6 +122,10 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 .page{display:none}.page.active{display:block}
 #toast{position:fixed;bottom:24px;right:24px;background:#1e1e2e;color:#fff;padding:12px 20px;border-radius:var(--radius);font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;box-shadow:var(--shadow-md)}
 #toast.show{opacity:1}
+/* Tooltips */
+[title]{position:relative;cursor:pointer}
+.btn[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1e1e2e;color:#fff;font-size:11px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.btn[title]:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e1e2e;pointer-events:none;z-index:999}
 @media print{#loginScreen,#app{display:none!important}#printArea{display:block!important}}
 #printArea{display:none}
 </style>
@@ -674,9 +678,9 @@ function renderEquipos(){
     <td>${e.empleadoId?`<div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${empNm(e.empleadoId).slice(0,2).toUpperCase()}</div>${empNm(e.empleadoId)}</div>`:'<span style="color:var(--text3)">Sin asignar</span>'}</td>
     <td>${e.areaId?areaN(e.areaId):'<span style="color:var(--text3)">—</span>'}</td>
     <td><div class="btn-group">
-      <button class="btn btn-sm" onclick="verDetalleEquipo(${e.id})">Ver</button>
+      <button class="btn btn-sm" onclick="verDetalleEquipo(${e.id})" title="Ver especificaciones completas del equipo">Ver</button>
       <button class="btn btn-sm" onclick="openEquipo(${e.id})">Editar</button>
-      <button class="btn btn-sm btn-danger" onclick="eliminarEquipo(${e.id})">🗑</button>
+      <button class="btn btn-sm btn-danger" onclick="eliminarEquipo(${e.id})" title="Eliminar equipo">🗑</button>
     </div></td></tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="empty-icon">💻</div>Sin equipos registrados</div></td></tr>';
 }
 
@@ -713,7 +717,7 @@ function renderLicencias(){
       ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">👤 ${empNm(l.empleadoId)}</div>`:''}
       <div class="lc-actions">
         <button class="btn btn-sm" onclick="openLicencia(${l.id})">Editar</button>
-        <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})">🗑</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})" title="Eliminar licencia">🗑</button>
       </div>
     </div>`;}).join(''):'<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔑</div>Sin licencias registradas</div>';
 }
@@ -736,42 +740,42 @@ function renderActivos(){
     <td>${badge(a.estado)}</td><td>${resp(a)}</td>
     <td>$${(a.costo||0).toFixed(2)}</td>
     <td><div class="btn-group">
-      <button class="btn btn-sm" onclick="verDetalle(${a.id})">Ver</button>
+      <button class="btn btn-sm" onclick="verDetalle(${a.id})" title="Ver detalle completo del activo">Ver</button>
       <button class="btn btn-sm" onclick="openActivo(${a.id})">Editar</button>
-      <button class="btn btn-sm btn-danger" onclick="openBaja(${a.id})">Baja</button>
-      <button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})">🗑</button>
+      <button class="btn btn-sm btn-danger" onclick="openBaja(${a.id})" title="Dar de baja este activo">Baja</button>
+      <button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})" title="Eliminar activo permanentemente">🗑</button>
     </div></td></tr>`).join(''):'<tr><td colspan="8"><div class="empty"><div class="empty-icon">📦</div>Sin activos</div></td></tr>';
 }
 
 function renderBodega(){
   const list=cache.activos.filter(a=>a.estado==='activo'&&!asigActual(a.id)&&(!globalEmp||String(a.empresaId)===globalEmp));
-  document.getElementById('tbBodega').innerHTML=list.length?list.map(a=>`<tr><td><span class="mono">${a.codigo}</span></td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${empN(a.empresaId)}</td><td>${badge(a.condicion)}</td><td>$${(a.costo||0).toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})">Asignar →</button></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏪</div>Bodega vacía</div></td></tr>';
+  document.getElementById('tbBodega').innerHTML=list.length?list.map(a=>`<tr><td><span class="mono">${a.codigo}</span></td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${empN(a.empresaId)}</td><td>${badge(a.condicion)}</td><td>$${(a.costo||0).toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})" title="Asignar este activo a un empleado">Asignar →</button></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏪</div>Bodega vacía</div></td></tr>';
 }
-function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
+function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})" title="Eliminar baja">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
 function renderEmpleados(){
   const list=cache.empleados.filter(e=>!globalEmp||String(e.empresaId)===globalEmp);
-  document.getElementById('tbEmp').innerHTML=list.map(e=>{const n=cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;return`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div><span style="font-weight:500">${e.nombre}</span></div></td><td>${e.cargo}</td><td>${areaN(e.areaId)}</td><td>${empN(e.empresaId)}</td><td>${n}</td><td>${badge(e.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="verExpediente(${e.id})">Expediente</button><button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Sin empleados</div></td></tr>';
+  document.getElementById('tbEmp').innerHTML=list.map(e=>{const n=cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;return`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div><span style="font-weight:500">${e.nombre}</span></div></td><td>${e.cargo}</td><td>${areaN(e.areaId)}</td><td>${empN(e.empresaId)}</td><td>${n}</td><td>${badge(e.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="verExpediente(${e.id})" title="Ver historial completo de activos del empleado">Expediente</button><button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})" title="Eliminar empleado">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Sin empleados</div></td></tr>';
 }
 function renderAreas(){
-  document.getElementById('tbAreas').innerHTML=cache.areas.map(a=>{const eq=cache.equipos.filter(x=>x.areaId==a.id).length,ac=cache.activos.filter(x=>x.areaId==a.id).length;return`<tr><td><span style="font-weight:500">${a.nombre}</span></td><td>${empN(a.empresaId)}</td><td>${a.responsable?empNm(a.responsable):'—'}</td><td>${eq}</td><td>${ac}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openArea(${a.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('areas',${a.id})">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏬</div>Sin áreas</div></td></tr>';
+  document.getElementById('tbAreas').innerHTML=cache.areas.map(a=>{const eq=cache.equipos.filter(x=>x.areaId==a.id).length,ac=cache.activos.filter(x=>x.areaId==a.id).length;return`<tr><td><span style="font-weight:500">${a.nombre}</span></td><td>${empN(a.empresaId)}</td><td>${a.responsable?empNm(a.responsable):'—'}</td><td>${eq}</td><td>${ac}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openArea(${a.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('areas',${a.id})" title="Eliminar área">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏬</div>Sin áreas</div></td></tr>';
 }
 function renderEmpresas(){
-  document.getElementById('tbEmpresas').innerHTML=cache.empresas.map(e=>{const p=cache.activos.filter(a=>a.empresaId==e.id).length,u=cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;return`<tr><td><span style="font-weight:500">${e.nombre}</span></td><td><span class="mono">${e.ruc||'—'}</span></td><td>${e.contacto||'—'}</td><td>${p}</td><td>${u}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏢</div>Sin empresas</div></td></tr>';
+  document.getElementById('tbEmpresas').innerHTML=cache.empresas.map(e=>{const p=cache.activos.filter(a=>a.empresaId==e.id).length,u=cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;return`<tr><td><span style="font-weight:500">${e.nombre}</span></td><td><span class="mono">${e.ruc||'—'}</span></td><td>${e.contacto||'—'}</td><td>${p}</td><td>${u}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})" title="Eliminar empresa">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏢</div>Sin empresas</div></td></tr>';
 }
 function renderAsignaciones(){
   const list=cache.asignaciones.filter(a=>!globalEmp||String(a.empresaUsoId)===globalEmp);
-  document.getElementById('tbAsig').innerHTML=list.length?list.map(a=>`<tr><td>${actC(a.activoId)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${empNm(a.empleadoId).slice(0,2).toUpperCase()}</div>${empNm(a.empleadoId)}</div></td><td>${empN(a.empresaUsoId)}</td><td>${a.fecha}</td><td>${badge(a.condicionEntrega)}</td><td>${badge(a.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="printHojaById(${a.id})">🖨️</button>${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})">Devolver</button>`:''}<button class="btn btn-sm btn-danger" onclick="eliminarAsignacion(${a.id})">🗑</button></div></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div>Sin asignaciones</div></td></tr>';
+  document.getElementById('tbAsig').innerHTML=list.length?list.map(a=>`<tr><td>${actC(a.activoId)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${empNm(a.empleadoId).slice(0,2).toUpperCase()}</div>${empNm(a.empleadoId)}</div></td><td>${empN(a.empresaUsoId)}</td><td>${a.fecha}</td><td>${badge(a.condicionEntrega)}</td><td>${badge(a.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="printHojaById(${a.id})" title="Imprimir hoja de entrega">🖨️</button>${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})" title="Registrar devolución del activo">Devolver</button>`:''}<button class="btn btn-sm btn-danger" onclick="eliminarAsignacion(${a.id})" title="Eliminar asignación">🗑</button></div></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div>Sin asignaciones</div></td></tr>';
 }
 function renderHistorial(){
   const fT=v('fHistTipo');
   const list=[...cache.historial].reverse().filter(h=>!fT||h.tipo===fT);
-  document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">${tipoBadge(h.tipo)}<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">${h.fecha}</span><button class="btn btn-sm btn-danger" onclick="delRecord('historial',${h.id})" style="padding:2px 8px;font-size:11px">🗑</button></div></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
+  document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">${tipoBadge(h.tipo)}<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">${h.fecha}</span><button class="btn btn-sm btn-danger" onclick="delRecord('historial',${h.id})" title="Eliminar registro" style="padding:2px 8px;font-size:11px">🗑</button></div></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
 }
 function renderDepr(){
   const list=cache.activos.filter(a=>a.estado==='activo'&&a.costo&&a.vidaUtil);
-  document.getElementById('tbDepr').innerHTML=list.map(a=>{const vu=a.vidaUtil||5,da=(a.costo||0)/vu,anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0,dt=Math.min(anos*da,a.costo||0),va=Math.max((a.costo||0)-dt,0),pct=Math.min((dt/(a.costo||1))*100,100),col=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--green)';return`<tr><td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text2)">${a.descripcion}</span></td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${vu}a</td><td>$${da.toFixed(2)}</td><td style="font-weight:600">$${va.toFixed(2)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div><span style="font-size:12px">${pct.toFixed(0)}%</span></div></td><td><button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})">🗑</button></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📉</div>Sin datos</div></td></tr>';
+  document.getElementById('tbDepr').innerHTML=list.map(a=>{const vu=a.vidaUtil||5,da=(a.costo||0)/vu,anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0,dt=Math.min(anos*da,a.costo||0),va=Math.max((a.costo||0)-dt,0),pct=Math.min((dt/(a.costo||1))*100,100),col=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--green)';return`<tr><td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text2)">${a.descripcion}</span></td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${vu}a</td><td>$${da.toFixed(2)}</td><td style="font-weight:600">$${va.toFixed(2)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div><span style="font-size:12px">${pct.toFixed(0)}%</span></div></td><td><button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})" title="Eliminar activo permanentemente">🗑</button></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📉</div>Sin datos</div></td></tr>';
 }
-function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.usuarios.map(u=>`<tr><td><span class="mono">${u.usuario}</span></td><td>${u.nombre||'—'}</td><td>${badge(u.rol,'purple')}</td><td>${u.empresaId?empN(u.empresaId):'Todas'}</td><td>${badge(u.estado||'activo')}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">Sin usuarios</div></td></tr>';}
+function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.usuarios.map(u=>`<tr><td><span class="mono">${u.usuario}</span></td><td>${u.nombre||'—'}</td><td>${badge(u.rol,'purple')}</td><td>${u.empresaId?empN(u.empresaId):'Todas'}</td><td>${badge(u.estado||'activo')}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})" title="Eliminar usuario">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">Sin usuarios</div></td></tr>';}
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -978,7 +982,7 @@ function renderTraslados(){
       <td>${t.fecha}</td>
       <td>${t.motivo||'—'}</td>
       <td>${badge(t.condicionRecibe)}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delRecord('traslados',${t.id})">🗑</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delRecord('traslados',${t.id})" title="Eliminar traslado">🗑</button></td>
     </tr>`).join('')
     :'<tr><td colspan="8"><div class="empty"><div class="empty-icon">⇄</div>Sin traslados</div></td></tr>';
 }
