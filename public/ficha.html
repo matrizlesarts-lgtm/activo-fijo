@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ficha de Registro de Empleado</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#1e1e2e 0%,#2952cc 100%);min-height:100vh;padding:24px 16px}
+.container{max-width:560px;margin:0 auto}
+.header{text-align:center;margin-bottom:28px;color:#fff}
+.header .logo{width:52px;height:52px;background:rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 12px}
+.header h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.header p{font-size:13px;opacity:.7}
+.card{background:#fff;border-radius:20px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.section-title{font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 14px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+.section-title:first-child{margin-top:0}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fgroup{margin-bottom:14px}
+.fgroup label{display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.fgroup label .req{color:#dc2626}
+.fgroup input,.fgroup select,.fgroup textarea{width:100%;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;color:#1e1e2e;transition:border .15s;background:#fff}
+.fgroup textarea{resize:vertical;min-height:80px}
+.fgroup input:focus,.fgroup select:focus,.fgroup textarea:focus{outline:none;border-color:#3b6ff0;box-shadow:0 0 0 3px rgba(59,111,240,.12)}
+.fgroup input.error{border-color:#dc2626}
+.foto-area{border:2px dashed #e5e7eb;border-radius:12px;padding:24px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:14px;position:relative}
+.foto-area:hover{border-color:#3b6ff0;background:#eef2ff}
+.foto-area .icon{font-size:32px;margin-bottom:8px}
+.foto-area p{font-size:13px;color:#6b7280}
+.foto-area p small{font-size:11px;color:#9ca3af}
+.foto-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.foto-preview{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #3b6ff0;margin:0 auto 8px;display:block}
+.firma-area{border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:8px}
+#firmaCanvas{display:block;width:100%;height:140px;cursor:crosshair;touch-action:none}
+.firma-btns{display:flex;gap:8px;margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:all .15s}
+.btn-primary{background:#3b6ff0;color:#fff;width:100%;padding:14px}
+.btn-primary:hover{background:#2952cc}
+.btn-primary:disabled{background:#9ca3af;cursor:not-allowed}
+.btn-outline{background:#fff;color:#6b7280;border:1.5px solid #e5e7eb;padding:7px 14px;font-size:12px}
+.btn-outline:hover{background:#f9fafb}
+.alert{padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px}
+.alert-info{background:#eef2ff;color:#2952cc}
+.alert-success{background:#dcfce7;color:#16a34a;text-align:center;padding:24px}
+.alert-success .icon{font-size:40px;margin-bottom:8px}
+.alert-success h2{font-size:18px;margin-bottom:6px}
+.required-note{font-size:12px;color:#9ca3af;margin-bottom:20px}
+.step-indicator{display:flex;gap:8px;margin-bottom:24px;justify-content:center}
+.step{width:32px;height:4px;border-radius:2px;background:#e5e7eb;transition:background .3s}
+.step.active{background:#3b6ff0}
+.step.done{background:#16a34a}
+@media(max-width:480px){.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">🖥️</div>
+    <h1>AssetPro</h1>
+    <p>Registro de ficha de empleado</p>
+  </div>
+
+  <div class="card" id="mainCard">
+    <div class="step-indicator">
+      <div class="step active" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <div class="step" id="step3"></div>
+    </div>
+
+    <!-- SUCCESS STATE -->
+    <div id="successState" style="display:none">
+      <div class="alert alert-success">
+        <div class="icon">✅</div>
+        <h2>¡Ficha enviada correctamente!</h2>
+        <p>El administrador revisará tu información y te notificará cuando esté aprobada.</p>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div id="formState">
+      <div class="alert alert-info">
+        📋 Por favor completa tu ficha de registro. Todos los campos marcados con <span style="color:#dc2626">*</span> son obligatorios.
+      </div>
+
+      <!-- SECCIÓN 1: DATOS PERSONALES -->
+      <div class="section-title">👤 Datos personales</div>
+
+      <div class="fgroup">
+        <label>Foto de perfil</label>
+        <div class="foto-area" id="fotoArea" onclick="document.getElementById('fotoInput').click()">
+          <img id="fotoPreview" class="foto-preview" style="display:none">
+          <div id="fotoPlaceholder">
+            <div class="icon">📷</div>
+            <p>Toca para subir tu foto<br><small>JPG o PNG, máximo 5MB</small></p>
+          </div>
+          <input type="file" id="fotoInput" accept="image/*" onchange="handleFoto(event)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Nombre completo <span class="req">*</span></label>
+          <input id="fNombre" type="text" placeholder="Tu nombre completo" value="{{NOMBRE}}">
+        </div>
+        <div class="fgroup">
+          <label>DUI / Identificación <span class="req">*</span></label>
+          <input id="fDUI" type="text" placeholder="00000000-0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Fecha de nacimiento</label>
+          <input id="fNacimiento" type="date">
+        </div>
+        <div class="fgroup">
+          <label>Género</label>
+          <select id="fGenero">
+            <option value="">Seleccionar</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="otro">Prefiero no decir</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fgroup">
+        <label>Dirección de residencia</label>
+        <textarea id="fDireccion" placeholder="Dirección completa..."></textarea>
+      </div>
+
+      <!-- SECCIÓN 2: CONTACTO -->
+      <div class="section-title">📞 Información de contacto</div>
+
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Correo electrónico <span class="req">*</span></label>
+          <input id="fCorreo" type="email" placeholder="tu@correo.com">
+        </div>
+        <div class="fgroup">
+          <label>Teléfono / WhatsApp <span class="req">*</span></label>
+          <input id="fTelefono" type="tel" placeholder="0000-0000">
+        </div>
+      </div>
+
+      <div class="fgroup">
+        <label>Contacto de emergencia</label>
+        <input id="fContactoEmergencia" type="text" placeholder="Nombre y teléfono">
+      </div>
+
+      <!-- SECCIÓN 3: DATOS LABORALES -->
+      <div class="section-title">💼 Datos laborales</div>
+
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Cargo / Puesto <span class="req">*</span></label>
+          <input id="fCargo" type="text" placeholder="Ej: Coordinador TI" value="{{CARGO}}">
+        </div>
+        <div class="fgroup">
+          <label>Empresa</label>
+          <input id="fEmpresa" type="text" value="{{EMPRESA}}" readonly style="background:#f9fafb;color:#6b7280">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="fgroup">
+          <label>Fecha de inicio</label>
+          <input id="fFechaInicio" type="date">
+        </div>
+        <div class="fgroup">
+          <label>Tipo de contrato</label>
+          <select id="fTipoContrato">
+            <option value="">Seleccionar</option>
+            <option value="tiempo_completo">Tiempo completo</option>
+            <option value="medio_tiempo">Medio tiempo</option>
+            <option value="temporal">Temporal</option>
+            <option value="practicante">Practicante</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fgroup">
+        <label>Estudios / Formación académica</label>
+        <textarea id="fEstudios" placeholder="Ej: Ingeniero en Sistemas, Universidad de El Salvador, 2018"></textarea>
+      </div>
+
+      <div class="fgroup">
+        <label>Experiencia previa relevante</label>
+        <textarea id="fExperiencia" placeholder="Describe brevemente tu experiencia previa..."></textarea>
+      </div>
+
+      <!-- SECCIÓN 4: FIRMA -->
+      <div class="section-title">✍️ Firma digital</div>
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:12px">Firma con tu dedo o mouse en el recuadro de abajo</p>
+      <div class="firma-area">
+        <canvas id="firmaCanvas"></canvas>
+      </div>
+      <div class="firma-btns">
+        <button class="btn btn-outline" onclick="limpiarFirma()">🗑 Limpiar firma</button>
+        <span style="font-size:12px;color:#9ca3af;line-height:32px;margin-left:8px" id="firmaStatus">Sin firma</span>
+      </div>
+
+      <div class="fgroup">
+        <label>Observaciones adicionales</label>
+        <textarea id="fObservaciones" placeholder="Cualquier información adicional que quieras agregar..."></textarea>
+      </div>
+
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;padding:12px;background:#f9fafb;border-radius:8px">
+        🔒 Tu información será tratada de forma confidencial y solo será utilizada para el control interno de activos de la empresa.
+      </div>
+
+      <button class="btn btn-primary" id="btnEnviar" onclick="enviarFicha()">
+        Enviar mi ficha de registro
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN = '{{TOKEN}}';
+let firmaData = null;
+let fotoData = null;
+let firmando = false;
+
+// ── Foto handling ──
+function handleFoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    fotoData = ev.target.result;
+    document.getElementById('fotoPreview').src = fotoData;
+    document.getElementById('fotoPreview').style.display = 'block';
+    document.getElementById('fotoPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Firma canvas ──
+const canvas = document.getElementById('firmaCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width;
+  canvas.height = 140;
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  if (e.touches) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY
+    };
+  }
+  return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+}
+
+canvas.addEventListener('mousedown', e => { firmando = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener('mousemove', e => { if (!firmando) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); updateFirmaStatus(); });
+canvas.addEventListener('mouseup', () => { firmando = false; capturarFirma(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); firmando = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!firmando) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); updateFirmaStatus(); });
+canvas.addEventListener('touchend', () => { firmando = false; capturarFirma(); });
+
+function capturarFirma() { firmaData = canvas.toDataURL('image/png'); }
+function limpiarFirma() { ctx.clearRect(0, 0, canvas.width, canvas.height); firmaData = null; document.getElementById('firmaStatus').textContent = 'Sin firma'; }
+function updateFirmaStatus() { document.getElementById('firmaStatus').textContent = '✅ Firma capturada'; document.getElementById('firmaStatus').style.color = '#16a34a'; }
+
+// ── Enviar ficha ──
+async function enviarFicha() {
+  const nombre = document.getElementById('fNombre').value.trim();
+  const dui    = document.getElementById('fDUI').value.trim();
+  const correo = document.getElementById('fCorreo').value.trim();
+  const tel    = document.getElementById('fTelefono').value.trim();
+  const cargo  = document.getElementById('fCargo').value.trim();
+
+  // Validar campos requeridos
+  let ok = true;
+  [['fNombre', nombre], ['fDUI', dui], ['fCorreo', correo], ['fTelefono', tel], ['fCargo', cargo]].forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!val) { el.classList.add('error'); ok = false; }
+    else el.classList.remove('error');
+  });
+
+  if (!ok) { alert('Por favor completa todos los campos obligatorios.'); return; }
+
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const data = {
+    token: TOKEN,
+    nombre,
+    dui,
+    correo,
+    telefono: tel,
+    cargo,
+    nacimiento:        document.getElementById('fNacimiento').value,
+    genero:            document.getElementById('fGenero').value,
+    direccion:         document.getElementById('fDireccion').value,
+    contactoEmergencia:document.getElementById('fContactoEmergencia').value,
+    empresa:           document.getElementById('fEmpresa').value,
+    fechaInicio:       document.getElementById('fFechaInicio').value,
+    tipoContrato:      document.getElementById('fTipoContrato').value,
+    estudios:          document.getElementById('fEstudios').value,
+    experiencia:       document.getElementById('fExperiencia').value,
+    observaciones:     document.getElementById('fObservaciones').value,
+    fotoUrl:           fotoData || '',
+    firmaUrl:          firmaData || ''
+  };
+
+  try {
+    const r = await fetch('/api/ficha-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const res = await r.json();
+    if (res.ok) {
+      document.getElementById('formState').style.display = 'none';
+      document.getElementById('successState').style.display = 'block';
+      document.querySelectorAll('.step').forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    } else {
+      alert('Error al enviar. Intenta de nuevo.');
+      btn.disabled = false;
+      btn.textContent = 'Enviar mi ficha de registro';
+    }
+  } catch (e) {
+    alert('Error de conexión. Intenta de nuevo.');
+    btn.disabled = false;
+    btn.textContent = 'Enviar mi ficha de registro';
+  }
+}
+</script>
+</body>
+</html>
