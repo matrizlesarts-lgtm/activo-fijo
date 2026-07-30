@@ -1,7 +1,6 @@
 /**
  * Control de Activo Fijo — Servidor Express
  * Compatible con Railway (Volume persistente en /volume/data)
- * También funciona en local (guarda en ./data)
  */
 
 const http = require('http');
@@ -9,34 +8,21 @@ const fs   = require('fs');
 const path = require('path');
 const url  = require('url');
 
-// ── Ruta de datos: Railway monta el volume en /volume, localmente usa ./data ──
 const DATA_DIR  = process.env.RAILWAY_VOLUME_MOUNT_PATH
   ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'data')
   : path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
+console.log('📁 Datos en:', DATA_FILE);
 
-console.log('📁 Directorio de datos:', DATA_DIR);
-
-// ── Base de datos JSON ────────────────────────────────────────────────────────
 function loadDB() {
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, 'utf8');
-      return JSON.parse(raw);
-    }
-  } catch (e) {
-    console.error('Error leyendo db.json:', e.message);
-  }
+  try { if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
+  catch (e) { console.error('Error leyendo db:', e.message); }
   return initDB();
 }
 
 function saveDB(db) {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
-  } catch (e) {
-    console.error('Error guardando db.json:', e.message);
-  }
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); }
+  catch (e) { console.error('Error guardando db:', e.message); }
 }
 
 function initDB() {
@@ -73,44 +59,30 @@ function initDB() {
       { id: 3, codigo: 'AF-003', descripcion: 'Refrigeradora Mabe 18 pies', categoriaId: 10, empresaId: 2, areaId: 3, marca: 'Mabe', modelo: 'RME518PYMRE0', serie: 'SN345678', color: 'Plateado', costo: 650, condicion: 'nuevo', notas: '', fechaCompra: '2024-06-01', proveedor: 'Almacenes Simán', factura: 'F-0055', montoFactura: 650, garantia: 24, vencGarantia: '2026-06-01', vidaUtil: 10, especificaciones: '18 pies, No Frost', accesorios: [], estado: 'activo' }
     ],
     asignaciones: [
-      { id: 1, activoId: 1, empleadoId: 1, empresaUsoId: 1, fecha: '2024-01-20', condicionEntrega: 'bueno', entregadoPor: 'Admin', observaciones: 'Entregado en buenas condiciones', estado: 'activo' },
+      { id: 1, activoId: 1, empleadoId: 1, empresaUsoId: 1, fecha: '2024-01-20', condicionEntrega: 'bueno', entregadoPor: 'Admin', observaciones: '', estado: 'activo' },
       { id: 2, activoId: 2, empleadoId: 1, empresaUsoId: 1, fecha: '2024-03-05', condicionEntrega: 'nuevo', entregadoPor: 'Admin', observaciones: '', estado: 'activo' },
       { id: 3, activoId: 3, empleadoId: 3, empresaUsoId: 2, fecha: '2024-06-10', condicionEntrega: 'nuevo', entregadoPor: 'Admin', observaciones: '', estado: 'activo' }
     ],
-    traslados: [],
-    bajas: [],
+    traslados: [], bajas: [],
     historial: [
-      { id: 1, tipo: 'alta', activoId: 1, empleadoId: null, fecha: '2024-01-15', descripcion: 'Activo registrado en el sistema', empresaId: 1 },
+      { id: 1, tipo: 'alta', activoId: 1, empleadoId: null, fecha: '2024-01-15', descripcion: 'Activo registrado', empresaId: 1 },
       { id: 2, tipo: 'asignacion', activoId: 1, empleadoId: 1, fecha: '2024-01-20', descripcion: 'Asignado a Juan Carlos Ramos', empresaId: 1 },
-      { id: 3, tipo: 'alta', activoId: 2, empleadoId: null, fecha: '2024-03-01', descripcion: 'Activo registrado en el sistema', empresaId: 1 },
+      { id: 3, tipo: 'alta', activoId: 2, empleadoId: null, fecha: '2024-03-01', descripcion: 'Activo registrado', empresaId: 1 },
       { id: 4, tipo: 'asignacion', activoId: 2, empleadoId: 1, fecha: '2024-03-05', descripcion: 'Asignado a Juan Carlos Ramos', empresaId: 1 },
-      { id: 5, tipo: 'alta', activoId: 3, empleadoId: null, fecha: '2024-06-01', descripcion: 'Activo registrado en el sistema', empresaId: 2 },
+      { id: 5, tipo: 'alta', activoId: 3, empleadoId: null, fecha: '2024-06-01', descripcion: 'Activo registrado', empresaId: 2 },
       { id: 6, tipo: 'asignacion', activoId: 3, empleadoId: 3, fecha: '2024-06-10', descripcion: 'Asignado a Roberto Fuentes', empresaId: 2 }
     ],
-    usuarios: [
-      { id: 1, usuario: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'admin', empresaId: '', estado: 'activo' }
-    ],
-    equipos: [],
-    licencias: [],
-    fichas: [],
-    sesiones: {}
+    usuarios: [{ id: 1, usuario: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'admin', empresaId: '', estado: 'activo' }],
+    equipos: [], licencias: [], fichas: [], sesiones: {}
   };
 }
 
 let db = loadDB();
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function nextId(arr) {
-  return (arr.length === 0 ? 0 : Math.max(...arr.map(x => x.id))) + 1;
-}
-function today() {
-  return new Date().toISOString().split('T')[0];
-}
+function nextId(arr) { return (arr.length === 0 ? 0 : Math.max(...arr.map(x => x.id))) + 1; }
+function today() { return new Date().toISOString().split('T')[0]; }
 function jsonRes(res, status, data) {
-  res.writeHead(status, {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
-  });
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
   res.end(JSON.stringify(data));
 }
 function parseBody(req) {
@@ -121,10 +93,8 @@ function parseBody(req) {
   });
 }
 function getSession(req) {
-  const cookie = req.headers.cookie || '';
-  const m = cookie.match(/session=([^;]+)/);
-  if (!m) return null;
-  return db.sesiones[m[1]] || null;
+  const m = (req.headers.cookie || '').match(/session=([^;]+)/);
+  return m ? db.sesiones[m[1]] || null : null;
 }
 function requireAuth(req, res) {
   const s = getSession(req);
@@ -132,102 +102,75 @@ function requireAuth(req, res) {
   return s;
 }
 
-// ── CRUD genérico ─────────────────────────────────────────────────────────────
 function crudHandler(tabla, req, res, parts) {
   const id = parts[2] ? parseInt(parts[2]) : null;
-
   if (req.method === 'GET') {
-    if (id) {
-      const item = db[tabla].find(x => x.id === id);
-      return item ? jsonRes(res, 200, item) : jsonRes(res, 404, { error: 'No encontrado' });
-    }
+    if (id) { const item = db[tabla].find(x => x.id === id); return item ? jsonRes(res, 200, item) : jsonRes(res, 404, { error: 'No encontrado' }); }
     return jsonRes(res, 200, db[tabla]);
   }
-  if (req.method === 'POST') {
-    return parseBody(req).then(body => {
-      body.id = nextId(db[tabla]);
-      db[tabla].push(body);
-      saveDB(db);
-      jsonRes(res, 201, body);
-    });
-  }
-  if (req.method === 'PUT' && id) {
-    return parseBody(req).then(body => {
-      const i = db[tabla].findIndex(x => x.id === id);
-      if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' });
-      db[tabla][i] = { ...db[tabla][i], ...body, id };
-      saveDB(db);
-      jsonRes(res, 200, db[tabla][i]);
-    });
-  }
-  if (req.method === 'DELETE' && id) {
-    const i = db[tabla].findIndex(x => x.id === id);
-    if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' });
-    db[tabla].splice(i, 1);
-    saveDB(db);
-    return jsonRes(res, 200, { ok: true });
-  }
+  if (req.method === 'POST') return parseBody(req).then(body => { body.id = nextId(db[tabla]); db[tabla].push(body); saveDB(db); jsonRes(res, 201, body); });
+  if (req.method === 'PUT' && id) return parseBody(req).then(body => { const i = db[tabla].findIndex(x => x.id === id); if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' }); db[tabla][i] = { ...db[tabla][i], ...body, id }; saveDB(db); jsonRes(res, 200, db[tabla][i]); });
+  if (req.method === 'DELETE' && id) { const i = db[tabla].findIndex(x => x.id === id); if (i < 0) return jsonRes(res, 404, { error: 'No encontrado' }); db[tabla].splice(i, 1); saveDB(db); return jsonRes(res, 200, { ok: true }); }
   jsonRes(res, 405, { error: 'Método no permitido' });
 }
 
-// ── Tipos MIME ────────────────────────────────────────────────────────────────
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.css':  'text/css',
-  '.js':   'application/javascript',
-  '.json': 'application/json',
-  '.ico':  'image/x-icon',
-  '.png':  'image/png',
-  '.svg':  'image/svg+xml',
-};
+const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css', '.js':'application/javascript', '.json':'application/json', '.ico':'image/x-icon', '.png':'image/png', '.svg':'image/svg+xml' };
 
-// ── Servidor HTTP ─────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
+    res.writeHead(204, { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type' });
     return res.end();
   }
 
-  const parsed  = url.parse(req.url, true);
+  const parsed   = url.parse(req.url, true);
   const pathname = parsed.pathname;
-  const parts   = pathname.split('/').filter(Boolean);
+  const parts    = pathname.split('/').filter(Boolean);
+
+  // ── Ficha pública: GET /ficha/:token ──────────────────────────────────────
+  if (parts[0] === 'ficha' && parts[1] && req.method === 'GET') {
+    const token = parts[1];
+    const ficha = db.fichas.find(f => f.token === token);
+    if (!ficha) { res.writeHead(404, {'Content-Type':'text/html;charset=utf-8'}); return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Enlace no válido o expirado</h2></body></html>'); }
+    if (ficha.estado === 'completada' || ficha.estado === 'aprobada') { res.writeHead(200, {'Content-Type':'text/html;charset=utf-8'}); return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px;color:#16a34a"><h2>✅ Tu ficha ya fue enviada</h2><p>El administrador la revisará pronto. ¡Gracias!</p></body></html>'); }
+    const html = fs.readFileSync(path.join(__dirname, 'public', 'ficha.html'), 'utf8')
+      .replace(/{{TOKEN}}/g, token)
+      .replace(/{{NOMBRE}}/g, ficha.nombrePre || '')
+      .replace(/{{EMPRESA}}/g, ficha.empresaNombre || '')
+      .replace(/{{CARGO}}/g, ficha.cargoPre || '');
+    res.writeHead(200, {'Content-Type':'text/html;charset=utf-8'});
+    return res.end(html);
+  }
 
   // ── API ───────────────────────────────────────────────────────────────────
   if (parts[0] === 'api') {
 
+    // Ficha submit — público, sin auth
+    if (parts[1] === 'ficha-submit' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const fi = db.fichas.findIndex(f => f.token === body.token);
+      if (fi < 0) return jsonRes(res, 404, { error: 'Token inválido' });
+      Object.assign(db.fichas[fi], body, { estado: 'completada', fechaEnvio: today() });
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true });
+    }
+
     // Login
     if (parts[1] === 'login' && req.method === 'POST') {
       const body = await parseBody(req);
-      const user = db.usuarios.find(u =>
-        u.usuario === body.usuario &&
-        u.password === body.password &&
-        u.estado === 'activo'
-      );
+      const user = db.usuarios.find(u => u.usuario === body.usuario && u.password === body.password && u.estado === 'activo');
       if (!user) return jsonRes(res, 401, { error: 'Credenciales incorrectas' });
       const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
       db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       saveDB(db);
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Set-Cookie': `session=${token}; HttpOnly; Path=/; SameSite=Lax`,
-        'Access-Control-Allow-Origin': '*'
-      });
-      return res.end(JSON.stringify({
-        ok: true,
-        user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }
-      }));
+      res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${token}; HttpOnly; Path=/; SameSite=Lax`, 'Access-Control-Allow-Origin':'*' });
+      return res.end(JSON.stringify({ ok: true, user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } }));
     }
 
     // Logout
     if (parts[1] === 'logout' && req.method === 'POST') {
-      const cookie = req.headers.cookie || '';
-      const m = cookie.match(/session=([^;]+)/);
+      const m = (req.headers.cookie||'').match(/session=([^;]+)/);
       if (m) { delete db.sesiones[m[1]]; saveDB(db); }
-      res.writeHead(200, { 'Set-Cookie': 'session=; Max-Age=0; Path=/', 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Set-Cookie':'session=; Max-Age=0; Path=/', 'Content-Type':'application/json' });
       return res.end(JSON.stringify({ ok: true }));
     }
 
@@ -236,24 +179,43 @@ const server = http.createServer(async (req, res) => {
       const sess = getSession(req);
       if (!sess) return jsonRes(res, 401, { error: 'No autenticado' });
       const user = db.usuarios.find(u => u.id === sess.userId);
-      return jsonRes(res, 200, user
-        ? { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }
-        : { error: 'No encontrado' }
-      );
+      return jsonRes(res, 200, user ? { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } : { error: 'No encontrado' });
     }
 
-    // Health check para Railway
+    // Health check
     if (parts[1] === 'health' && req.method === 'GET') {
       return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
     }
 
-    // Auth guard
+    // Auth guard para el resto
     if (!requireAuth(req, res)) return;
 
-    // Tablas CRUD
+    // TABLAS CRUD
     const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
-    if (TABLAS.includes(parts[1])) {
-      return crudHandler(parts[1], req, res, parts);
+    if (TABLAS.includes(parts[1])) return crudHandler(parts[1], req, res, parts);
+
+    // Generar ficha
+    if (parts[1] === 'generar-ficha' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const ficha = { id: nextId(db.fichas), token, estado: 'pendiente', nombrePre: body.nombre || '', cargoPre: body.cargo || '', empresaId: body.empresaId || null, empresaNombre: body.empresaNombre || '', fechaCreacion: today(), fechaEnvio: null };
+      db.fichas.push(ficha);
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true, token, ficha });
+    }
+
+    // Aprobar ficha → crear empleado
+    if (parts[1] === 'aprobar-ficha' && parts[2] && req.method === 'POST') {
+      const body = await parseBody(req);
+      const fi = db.fichas.findIndex(f => f.id === parseInt(parts[2]));
+      if (fi < 0) return jsonRes(res, 404, { error: 'Ficha no encontrada' });
+      const f = db.fichas[fi];
+      const emp = { id: nextId(db.empleados), nombre: body.nombre || f.nombre || f.nombrePre || '', dui: body.dui || f.dui || '', cargo: body.cargo || f.cargo || f.cargoPre || '', areaId: body.areaId || null, empresaId: body.empresaId || f.empresaId || null, correo: body.correo || f.correo || '', telefono: body.telefono || f.telefono || '', estado: 'activo', fotoUrl: f.fotoUrl || '' };
+      db.empleados.push(emp);
+      db.fichas[fi].estado = 'aprobada';
+      db.fichas[fi].empleadoId = emp.id;
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true, empleado: emp });
     }
 
     // Traslado de responsable
@@ -261,31 +223,15 @@ const server = http.createServer(async (req, res) => {
       const { activoId, aEmpleadoId, empresaDestinoId, condicionRecibe, motivo, observaciones, fecha } = await parseBody(req);
       const asigActual = db.asignaciones.filter(a => a.activoId === activoId && a.estado === 'activo').slice(-1)[0];
       const deEmpleadoId = asigActual ? asigActual.empleadoId : null;
-      if (asigActual) {
-        const i = db.asignaciones.findIndex(x => x.id === asigActual.id);
-        db.asignaciones[i].estado = 'trasladado';
-        db.asignaciones[i].fechaDevolucion = fecha;
-      }
-      const nuevaAsig = {
-        id: nextId(db.asignaciones), activoId, empleadoId: aEmpleadoId,
-        empresaUsoId: empresaDestinoId, fecha, condicionEntrega: condicionRecibe,
-        entregadoPor: deEmpleadoId ? (db.empleados.find(e => e.id === deEmpleadoId) || {}).nombre || '' : '',
-        observaciones: observaciones || '', estado: 'activo'
-      };
+      if (asigActual) { const i = db.asignaciones.findIndex(x => x.id === asigActual.id); db.asignaciones[i].estado = 'trasladado'; db.asignaciones[i].fechaDevolucion = fecha; }
+      const nuevaAsig = { id: nextId(db.asignaciones), activoId, empleadoId: aEmpleadoId, empresaUsoId: empresaDestinoId, fecha, condicionEntrega: condicionRecibe, entregadoPor: deEmpleadoId ? (db.empleados.find(e => e.id === deEmpleadoId)||{}).nombre||'' : '', observaciones: observaciones||'', estado: 'activo' };
       db.asignaciones.push(nuevaAsig);
-      const traslado = {
-        id: nextId(db.traslados), activoId, deEmpleadoId, aEmpleadoId,
-        empresaDestinoId, fecha, condicionRecibe, motivo: motivo || '', observaciones: observaciones || ''
-      };
+      const traslado = { id: nextId(db.traslados), activoId, deEmpleadoId, aEmpleadoId, empresaDestinoId, fecha, condicionRecibe, motivo: motivo||'', observaciones: observaciones||'' };
       db.traslados.push(traslado);
       const empDe = db.empleados.find(e => e.id === deEmpleadoId);
       const empA  = db.empleados.find(e => e.id === aEmpleadoId);
       const empEm = db.empresas.find(e => e.id === empresaDestinoId);
-      db.historial.push({
-        id: nextId(db.historial), tipo: 'traslado', activoId, empleadoId: aEmpleadoId, fecha,
-        descripcion: `Trasladado de ${empDe ? empDe.nombre : 'sin asignar'} a ${empA ? empA.nombre : '?'} (${empEm ? empEm.nombre : ''}) — Condición: ${condicionRecibe}`,
-        empresaId: empresaDestinoId
-      });
+      db.historial.push({ id: nextId(db.historial), tipo:'traslado', activoId, empleadoId: aEmpleadoId, fecha, descripcion:`Trasladado de ${empDe?empDe.nombre:'sin asignar'} a ${empA?empA.nombre:'?'} (${empEm?empEm.nombre:''}) — Condición: ${condicionRecibe}`, empresaId: empresaDestinoId });
       saveDB(db);
       return jsonRes(res, 200, { ok: true, traslado, asignacion: nuevaAsig });
     }
@@ -293,20 +239,13 @@ const server = http.createServer(async (req, res) => {
     // Dar de baja
     if (parts[1] === 'dar-baja' && req.method === 'POST') {
       const { activoId, fecha, tipo, motivo, autorizado, reporte } = await parseBody(req);
-      const baja = { id: nextId(db.bajas), activoId, fecha, tipo, motivo: motivo || '', autorizado: autorizado || '', reporte: reporte || '' };
+      const baja = { id: nextId(db.bajas), activoId, fecha, tipo, motivo: motivo||'', autorizado: autorizado||'', reporte: reporte||'' };
       db.bajas.push(baja);
       const ai = db.activos.findIndex(x => x.id === activoId);
       if (ai >= 0) db.activos[ai].estado = 'baja';
       const asigActual = db.asignaciones.filter(a => a.activoId === activoId && a.estado === 'activo').slice(-1)[0];
-      if (asigActual) {
-        const i = db.asignaciones.findIndex(x => x.id === asigActual.id);
-        db.asignaciones[i].estado = 'baja';
-      }
-      db.historial.push({
-        id: nextId(db.historial), tipo: 'baja', activoId, empleadoId: null, fecha,
-        descripcion: `Baja: ${tipo} — ${motivo || 'Sin descripción'}`,
-        empresaId: db.activos[ai]?.empresaId || 0
-      });
+      if (asigActual) { const i = db.asignaciones.findIndex(x => x.id === asigActual.id); db.asignaciones[i].estado = 'baja'; }
+      db.historial.push({ id: nextId(db.historial), tipo:'baja', activoId, empleadoId: null, fecha, descripcion:`Baja: ${tipo} — ${motivo||'Sin descripción'}`, empresaId: db.activos[ai]?.empresaId || 0 });
       saveDB(db);
       return jsonRes(res, 200, { ok: true, baja });
     }
@@ -317,126 +256,26 @@ const server = http.createServer(async (req, res) => {
       const i = db.asignaciones.findIndex(x => x.id === asigId);
       if (i < 0) return jsonRes(res, 404, { error: 'No encontrada' });
       const a = db.asignaciones[i];
-      db.asignaciones[i] = { ...a, estado: 'devuelto', condicionDevolucion: condicion, fechaDevolucion: today() };
-      db.historial.push({
-        id: nextId(db.historial), tipo: 'devolucion', activoId: a.activoId, empleadoId: a.empleadoId, fecha: today(),
-        descripcion: `Devuelto por ${(db.empleados.find(e => e.id === a.empleadoId) || {}).nombre || '?'} — Condición: ${condicion}`,
-        empresaId: a.empresaUsoId
-      });
+      db.asignaciones[i] = { ...a, estado:'devuelto', condicionDevolucion: condicion, fechaDevolucion: today() };
+      db.historial.push({ id: nextId(db.historial), tipo:'devolucion', activoId: a.activoId, empleadoId: a.empleadoId, fecha: today(), descripcion:`Devuelto por ${(db.empleados.find(e=>e.id===a.empleadoId)||{}).nombre||'?'} — Condición: ${condicion}`, empresaId: a.empresaUsoId });
       saveDB(db);
       return jsonRes(res, 200, { ok: true });
     }
 
     // Stats dashboard
     if (parts[1] === 'stats' && req.method === 'GET') {
-      const total    = db.activos.length;
-      const activos  = db.activos.filter(a => a.estado === 'activo');
+      const total = db.activos.length;
+      const activos = db.activos.filter(a => a.estado === 'activo');
       const asignados = activos.filter(a => db.asignaciones.some(x => x.activoId === a.id && x.estado === 'activo')).length;
-      const bodega   = activos.length - asignados;
-      const bajas    = db.activos.filter(a => a.estado === 'baja').length;
-      return jsonRes(res, 200, { total, asignados, bodega, bajas });
+      return jsonRes(res, 200, { total, asignados, bodega: activos.length - asignados, bajas: db.activos.filter(a => a.estado === 'baja').length });
     }
 
     return jsonRes(res, 404, { error: 'Ruta no encontrada' });
   }
 
-  // ── Ficha pública ────────────────────────────────────────────────────────────
-
-    // GET /ficha/:token → serve public form page
-    if (parts[0] === 'ficha' && parts[1] && req.method === 'GET') {
-      const token = parts[1];
-      const ficha = db.fichas.find(f => f.token === token);
-      if (!ficha) {
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Enlace no válido o expirado</h2></body></html>');
-      }
-      if (ficha.estado === 'completada') {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px;color:#16a34a"><h2>✅ Tu ficha ya fue enviada</h2><p>El administrador la revisará pronto.</p></body></html>');
-      }
-      // Serve the public ficha form
-      const fs2 = require('fs');
-      const fichaHtml = fs2.readFileSync(require('path').join(__dirname, 'public', 'ficha.html'), 'utf8');
-      const page = fichaHtml
-        .replace('{{TOKEN}}', token)
-        .replace('{{NOMBRE}}', ficha.nombrePre || '')
-        .replace('{{EMPRESA}}', ficha.empresaNombre || '')
-        .replace('{{CARGO}}', ficha.cargoPre || '');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(page);
-    }
-
-    // POST /api/ficha-submit → employee submits their form
-    if (parts[0] === 'api' && parts[1] === 'ficha-submit' && req.method === 'POST') {
-      const body = await parseBody(req);
-      const ficha = db.fichas.find(f => f.token === body.token);
-      if (!ficha) return jsonRes(res, 404, { error: 'Token inválido' });
-      Object.assign(ficha, body, { estado: 'completada', fechaEnvio: today() });
-      saveDB(db);
-      return jsonRes(res, 200, { ok: true });
-    }
-
-    // POST /api/generar-ficha → admin generates link for employee
-    if (parts[0] === 'api' && parts[1] === 'generar-ficha' && req.method === 'POST') {
-      if (!requireAuth(req, res)) return;
-      const body = await parseBody(req);
-      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      const ficha = {
-        id: nextId(db.fichas),
-        token,
-        estado: 'pendiente',
-        nombrePre: body.nombre || '',
-        cargoPre: body.cargo || '',
-        empresaId: body.empresaId || null,
-        empresaNombre: body.empresaNombre || '',
-        fechaCreacion: today(),
-        fechaEnvio: null
-      };
-      db.fichas.push(ficha);
-      saveDB(db);
-      return jsonRes(res, 200, { ok: true, token, ficha });
-    }
-
-    // POST /api/aprobar-ficha/:id → admin approves and creates employee
-    if (parts[0] === 'api' && parts[1] === 'aprobar-ficha' && parts[2] && req.method === 'POST') {
-      if (!requireAuth(req, res)) return;
-      const body = await parseBody(req);
-      const fichaId = parseInt(parts[2]);
-      const fi = db.fichas.findIndex(f => f.id === fichaId);
-      if (fi < 0) return jsonRes(res, 404, { error: 'Ficha no encontrada' });
-      // Create employee from ficha data
-      const emp = {
-        id: nextId(db.empleados),
-        nombre: body.nombre || db.fichas[fi].nombre || '',
-        dui: body.dui || db.fichas[fi].dui || '',
-        cargo: body.cargo || db.fichas[fi].cargo || '',
-        areaId: body.areaId || null,
-        empresaId: body.empresaId || db.fichas[fi].empresaId || null,
-        correo: body.correo || db.fichas[fi].correo || '',
-        telefono: body.telefono || db.fichas[fi].telefono || '',
-        estado: 'activo',
-        fotoUrl: db.fichas[fi].fotoUrl || ''
-      };
-      db.empleados.push(emp);
-      db.fichas[fi].estado = 'aprobada';
-      db.fichas[fi].empleadoId = emp.id;
-      saveDB(db);
-      return jsonRes(res, 200, { ok: true, empleado: emp });
-    }
-
-    // DELETE /api/fichas/:id
-    if (parts[0] === 'api' && parts[1] === 'fichas' && parts[2] && req.method === 'DELETE') {
-      if (!requireAuth(req, res)) return;
-      const id = parseInt(parts[2]);
-      db.fichas = db.fichas.filter(f => f.id !== id);
-      saveDB(db);
-      return jsonRes(res, 200, { ok: true });
-    }
-
-  // ── Archivos estáticos ─────────────────────────────────────────────────────
+  // ── Archivos estáticos ────────────────────────────────────────────────────
   let filePath = pathname === '/' ? '/index.html' : pathname;
   filePath = path.join(__dirname, 'public', filePath);
-
   fs.readFile(filePath, (err, data) => {
     if (err) {
       fs.readFile(path.join(__dirname, 'public', 'index.html'), (e2, html) => {
@@ -454,7 +293,7 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n✅ Control de Activo Fijo corriendo en http://0.0.0.0:${PORT}`);
+  console.log(`\n✅ AssetPro corriendo en http://0.0.0.0:${PORT}`);
   console.log(`   Datos en: ${DATA_FILE}`);
-  console.log(`   Usuario: admin  |  Contraseña: admin123\n`);
+  console.log(`   Usuario: admin | Contraseña: admin123\n`);
 });
