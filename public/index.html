@@ -391,12 +391,27 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   <div class="page-tabs-wrap">
     <div class="page-tabs">
       <button class="page-tab active" onclick="switchPageTab(this,'sub-usuarios')">⚙️ Usuarios</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-fichas')">📋 Fichas de registro</button>
     </div>
   </div>
   <div id="sub-usuarios" class="sub-page active">
     <div class="card">
       <div class="card-header"><span class="card-title">⚙️ Usuarios del sistema</span><button class="btn btn-primary btn-sm" onclick="openUsuario()">+ Nuevo</button></div>
       <div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Empresa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbUsuarios"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-fichas" class="sub-page">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📋 Fichas de registro de empleados</span>
+        <button class="btn btn-primary btn-sm" onclick="openGenerarFicha()">+ Generar enlace</button>
+      </div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Genera un enlace personalizado para que el empleado complete su propia ficha desde su celular o computadora.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Nombre pre-asignado</th><th>Cargo</th><th>Empresa</th><th>Estado</th><th>Fecha creación</th><th>Fecha envío</th><th>Acciones</th></tr></thead>
+        <tbody id="tbFichas"></tbody></table>
+      </div>
     </div>
   </div>
 </div>
@@ -903,6 +918,159 @@ async function saveCategoria(){
   const r=editingId.cat?await PUT('categorias/'+editingId.cat,data):await POST('categorias',data);
   if(r&&!r.error){closeModal('ovCategoria');await loadAll();renderCategorias();toast('Categoría guardada');}
   else toast('Error al guardar','warning');
+}
+
+// ─── FICHAS ───────────────────────────────────────────────────
+let currentFichaId = null;
+let currentEnlaceUrl = '';
+
+function renderFichas() {
+  const list = cache.fichas || [];
+  const STATUS = { pendiente:'🕐 Pendiente', completada:'📋 Completada', aprobada:'✅ Aprobada', rechazada:'❌ Rechazada' };
+  const CLS = { pendiente:'gray', completada:'amber', aprobada:'green', rechazada:'red' };
+  document.getElementById('tbFichas').innerHTML = list.length
+    ? list.map(f => `<tr>
+        <td><span style="font-weight:500">${f.nombrePre||'Sin nombre previo'}</span></td>
+        <td>${f.cargoPre||'—'}</td>
+        <td>${empN(f.empresaId)}</td>
+        <td>${badge(STATUS[f.estado]||f.estado, CLS[f.estado]||'gray')}</td>
+        <td>${f.fechaCreacion||'—'}</td>
+        <td>${f.fechaEnvio||'<span style="color:var(--text3)">Sin enviar</span>'}</td>
+        <td><div class="btn-group">
+          ${f.estado==='completada'?`<button class="btn btn-sm btn-success" onclick="verFicha(${f.id})" title="Revisar y aprobar ficha">Revisar</button>`:''}
+          ${f.estado==='pendiente'?`<button class="btn btn-sm" onclick="verEnlaceFicha('${f.token}')" title="Ver enlace para compartir">🔗 Enlace</button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="eliminarFicha(${f.id})" title="Eliminar ficha">🗑</button>
+        </div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div>No hay fichas generadas aún</div></td></tr>';
+}
+
+function openGenerarFicha() {
+  ['gfNombre','gfCargo'].forEach(f => sv(f,''));
+  sel('gfEmpresa', empOpts());
+  openModal('ovGenerarFicha');
+}
+
+async function generarFicha() {
+  const empresa = cache.empresas.find(e => String(e.id) === v('gfEmpresa'));
+  const r = await POST('generar-ficha', {
+    nombre: v('gfNombre'),
+    cargo: v('gfCargo'),
+    empresaId: v('gfEmpresa') || null,
+    empresaNombre: empresa ? empresa.nombre : ''
+  });
+  if (r && r.ok) {
+    closeModal('ovGenerarFicha');
+    await loadAll();
+    renderFichas();
+    mostrarEnlace(r.token);
+    toast('Enlace generado correctamente');
+  }
+}
+
+function mostrarEnlace(token) {
+  currentEnlaceUrl = window.location.origin + '/ficha/' + token;
+  document.getElementById('enlaceTexto').textContent = currentEnlaceUrl;
+  generarQR(currentEnlaceUrl);
+  openModal('ovEnlace');
+}
+
+function verEnlaceFicha(token) {
+  currentEnlaceUrl = window.location.origin + '/ficha/' + token;
+  document.getElementById('enlaceTexto').textContent = currentEnlaceUrl;
+  generarQR(currentEnlaceUrl);
+  openModal('ovEnlace');
+}
+
+function copiarEnlace() {
+  navigator.clipboard.writeText(currentEnlaceUrl).then(() => toast('Enlace copiado al portapapeles'));
+}
+
+function compartirEnlace() {
+  if (navigator.share) {
+    navigator.share({ title: 'Ficha de registro', text: 'Completa tu ficha de empleado:', url: currentEnlaceUrl });
+  } else { copiarEnlace(); }
+}
+
+function generarQR(text) {
+  // Simple QR using Google Charts API
+  const canvas = document.getElementById('qrCanvas');
+  const img = new Image();
+  img.onload = () => { const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 180, 180); };
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}`;
+}
+
+function verFicha(id) {
+  currentFichaId = id;
+  const f = (cache.fichas || []).find(x => x.id == id);
+  if (!f) return;
+  document.getElementById('mFichaTitulo').textContent = 'Ficha: ' + (f.nombre || f.nombrePre || 'Empleado');
+  document.getElementById('fichaContent').innerHTML = `
+    <div class="grid2" style="margin-bottom:16px">
+      ${f.fotoUrl ? `<div style="text-align:center"><img src="${f.fotoUrl}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--blue)"><div style="font-size:13px;font-weight:500;margin-top:8px">${f.nombre||''}</div></div>` : '<div></div>'}
+      <table style="font-size:13px"><tbody>
+        <tr><td style="color:var(--text2);padding:5px 0;padding-right:12px">DUI:</td><td style="font-weight:500">${f.dui||'—'}</td></tr>
+        <tr><td style="color:var(--text2);padding:5px 0">Cargo:</td><td>${f.cargo||f.cargoPre||'—'}</td></tr>
+        <tr><td style="color:var(--text2);padding:5px 0">Correo:</td><td>${f.correo||'—'}</td></tr>
+        <tr><td style="color:var(--text2);padding:5px 0">Teléfono:</td><td>${f.telefono||'—'}</td></tr>
+        <tr><td style="color:var(--text2);padding:5px 0">Empresa:</td><td>${f.empresa||empN(f.empresaId)}</td></tr>
+      </tbody></table>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;text-transform:uppercase">Datos adicionales</div>
+    <div class="grid2" style="font-size:13px;margin-bottom:16px">
+      <div><span style="color:var(--text2)">Nacimiento:</span> ${f.nacimiento||'—'}</div>
+      <div><span style="color:var(--text2)">Inicio:</span> ${f.fechaInicio||'—'}</div>
+      <div><span style="color:var(--text2)">Contrato:</span> ${f.tipoContrato||'—'}</div>
+      <div><span style="color:var(--text2)">Género:</span> ${f.genero||'—'}</div>
+    </div>
+    ${f.estudios?`<div style="margin-bottom:10px"><span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase">Estudios</span><div style="font-size:13px;margin-top:4px">${f.estudios}</div></div>`:''}
+    ${f.experiencia?`<div style="margin-bottom:10px"><span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase">Experiencia</span><div style="font-size:13px;margin-top:4px">${f.experiencia}</div></div>`:''}
+    ${f.observaciones?`<div style="margin-bottom:10px"><span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase">Observaciones</span><div style="font-size:13px;margin-top:4px">${f.observaciones}</div></div>`:''}
+    ${f.firmaUrl?`<div style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:6px">Firma digital</div><img src="${f.firmaUrl}" style="border:1px solid var(--border);border-radius:8px;max-width:100%;height:80px;object-fit:contain;background:#f9fafb"></div>`:''}
+  `;
+  document.getElementById('btnAprobarFicha').onclick = () => aprobarFicha(id, f);
+  document.getElementById('btnRechazarFicha').onclick = () => rechazarFicha(id);
+  openModal('ovVerFicha');
+}
+
+async function aprobarFicha(id, f) {
+  if (!confirm('¿Aprobar esta ficha y crear el empleado en el sistema?')) return;
+  const r = await POST('aprobar-ficha/' + id, {
+    nombre: f.nombre || f.nombrePre || '',
+    dui: f.dui || '',
+    cargo: f.cargo || f.cargoPre || '',
+    correo: f.correo || '',
+    telefono: f.telefono || '',
+    empresaId: f.empresaId || null
+  });
+  if (r && r.ok) {
+    closeModal('ovVerFicha');
+    await loadAll();
+    renderFichas();
+    toast('✅ Empleado creado correctamente desde la ficha');
+  } else {
+    toast('Error al aprobar', 'warning');
+  }
+}
+
+async function rechazarFicha(id) {
+  if (!confirm('¿Rechazar esta ficha?')) return;
+  const i = (cache.fichas||[]).findIndex(f => f.id == id);
+  if (i >= 0) {
+    await PUT('fichas/' + id, { ...cache.fichas[i], estado: 'rechazada' });
+    await loadAll();
+    renderFichas();
+    closeModal('ovVerFicha');
+    toast('Ficha rechazada');
+  }
+}
+
+async function eliminarFicha(id) {
+  if (!confirm('¿Eliminar esta ficha?')) return;
+  const r = await fetch('/api/fichas/' + id, { method: 'DELETE', credentials: 'include' });
+  await loadAll();
+  renderFichas();
+  toast('Ficha eliminada');
 }
 
 let toastTimer;
