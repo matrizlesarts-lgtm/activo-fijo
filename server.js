@@ -90,6 +90,8 @@ function initDB() {
     usuarios: [
       { id: 1, usuario: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'admin', empresaId: '', estado: 'activo' }
     ],
+    equipos: [],
+    licencias: [],
     sesiones: {}
   };
 }
@@ -248,7 +250,7 @@ const server = http.createServer(async (req, res) => {
     if (!requireAuth(req, res)) return;
 
     // Tablas CRUD
-    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios'];
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias'];
     if (TABLAS.includes(parts[1])) {
       return crudHandler(parts[1], req, res, parts);
     }
