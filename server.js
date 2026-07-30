@@ -198,7 +198,7 @@ const server = http.createServer(async (req, res) => {
     if (parts[1] === 'generar-ficha' && req.method === 'POST') {
       const body = await parseBody(req);
       const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-      const ficha = { id: nextId(db.fichas), token, estado: 'pendiente', nombrePre: body.nombre || '', cargoPre: body.cargo || '', empresaId: body.empresaId || null, empresaNombre: body.empresaNombre || '', fechaCreacion: today(), fechaEnvio: null };
+      const ficha = { id: nextId(db.fichas), token, estado: 'pendiente', nombrePre: body.nombre || '', cargoPre: body.cargo || '', empresaId: body.empresaId || null, empresaNombre: body.empresaNombre || '', empleadoExistenteId: body.empleadoId || null, fechaCreacion: today(), fechaEnvio: null };
       db.fichas.push(ficha);
       saveDB(db);
       return jsonRes(res, 200, { ok: true, token, ficha });
