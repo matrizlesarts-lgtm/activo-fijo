@@ -128,6 +128,15 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 .btn[title]:hover::before{content:'';position:absolute;bottom:calc(100% + 1px);left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1e1e2e;pointer-events:none;z-index:999}
 @media print{#loginScreen,#app{display:none!important}#printArea{display:block!important}}
 #printArea{display:none}
+
+/* Page tabs */
+.page-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;background:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:0 4px;overflow-x:auto}
+.page-tab{padding:12px 20px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;font-family:inherit;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:7px}
+.page-tab:hover{color:var(--text);background:var(--surface2)}
+.page-tab.active{color:var(--blue);border-bottom-color:var(--blue);background:#fff}
+.page-tab .tab-badge{background:var(--red);color:#fff;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:600}
+.sub-page{display:none}.sub-page.active{display:block}
+.page-tabs-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:20px;border:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -159,26 +168,13 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <nav>
       <div class="nav-section">Principal</div>
       <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
-      <div class="nav-section">Tecnología</div>
-      <div class="nav-item" data-page="equipos"><span class="nav-icon">💻</span>Equipos</div>
-      <div class="nav-item" data-page="licencias"><span class="nav-icon">🔑</span>Licencias</div>
-      <div class="nav-item" data-page="asignaciones"><span class="nav-icon">👤</span>Asignaciones</div>
-      <div class="nav-section">Inventario</div>
-      <div class="nav-item" data-page="activos"><span class="nav-icon">📦</span>Activos</div>
-      <div class="nav-item" data-page="bodega"><span class="nav-icon">🏪</span>Bodega</div>
-      <div class="nav-item" data-page="bajas"><span class="nav-icon">🗑️</span>Bajas</div>
-      <div class="nav-section">Catálogos</div>
-      <div class="nav-item" data-page="empleados"><span class="nav-icon">👥</span>Empleados</div>
-      <div class="nav-item" data-page="areas"><span class="nav-icon">🏬</span>Áreas</div>
-      <div class="nav-item" data-page="empresas"><span class="nav-icon">🏢</span>Empresas</div>
-      <div class="nav-section">Reportes</div>
-      <div class="nav-item" data-page="traslados"><span class="nav-icon">⇄</span>Traslados</div>
-      <div class="nav-item" data-page="categorias"><span class="nav-icon">◈</span>Categorías</div>
-      <div class="nav-item" data-page="historial"><span class="nav-icon">📋</span>Historial</div>
-      <div class="nav-item" data-page="depreciacion"><span class="nav-icon">📉</span>Depreciación</div>
-      <div class="nav-item" data-page="reportes"><span class="nav-icon">🖨️</span>Reportes</div>
+      <div class="nav-section">Módulos</div>
+      <div class="nav-item" data-page="tecnologia"><span class="nav-icon">💻</span>Tecnología</div>
+      <div class="nav-item" data-page="inventario"><span class="nav-icon">📦</span>Inventario</div>
+      <div class="nav-item" data-page="catalogos"><span class="nav-icon">◈</span>Catálogos</div>
+      <div class="nav-item" data-page="reportes"><span class="nav-icon">📋</span>Reportes</div>
       <div class="nav-section">Sistema</div>
-      <div class="nav-item" data-page="usuarios"><span class="nav-icon">⚙️</span>Usuarios</div>
+      <div class="nav-item" data-page="sistema"><span class="nav-icon">⚙️</span>Sistema</div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-row">
@@ -193,9 +189,9 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="page-title" id="pageTitle">Dashboard</div>
       <div class="topbar-right">
         <span id="companyBadge" class="badge badge-blue" style="display:none"></span>
-        <button class="btn btn-primary btn-sm" onclick="openActivo()">+ Nuevo activo</button>
-        <button class="btn btn-sm" style="color:var(--purple);border-color:rgba(124,58,237,.3)" onclick="openLicencia()">🔑 Licencia</button>
-        <button class="btn btn-sm" style="color:var(--cyan);border-color:rgba(8,145,178,.3)" onclick="openEquipo()">💻 Equipo</button>
+        <button class="btn btn-primary btn-sm" onclick="openActivo()" title="Registrar nuevo activo fijo">+ Nuevo activo</button>
+        <button class="btn btn-sm" style="color:var(--purple);border-color:rgba(124,58,237,.3)" onclick="openLicencia()" title="Registrar nueva licencia de software">🔑 Licencia</button>
+        <button class="btn btn-sm" style="color:var(--cyan);border-color:rgba(8,145,178,.3)" onclick="openEquipo()" title="Registrar nuevo equipo tecnológico">💻 Equipo</button>
       </div>
     </div>
     <div class="content">
@@ -212,336 +208,198 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
-<div id="page-equipos" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">💻 Inventario de equipos tecnológicos</span><button class="btn btn-primary btn-sm" onclick="openEquipo()">+ Nuevo equipo</button></div>
-    <div class="search-row">
-      <input type="text" id="searchEquipo" placeholder="🔍 Buscar equipo..." oninput="renderEquipos()">
-      <select id="fAreaEquipo" onchange="renderEquipos()"><option value="">Todas las áreas</option></select>
-      <select id="fEstEquipo" onchange="renderEquipos()"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="asignado">Asignado</option><option value="mantenimiento">Mantenimiento</option><option value="baja">Baja</option></select>
-      <select id="fTipoEquipo" onchange="renderEquipos()"><option value="">Todos los tipos</option><option value="laptop">Laptop</option><option value="desktop">Desktop</option><option value="monitor">Monitor</option><option value="impresora">Impresora</option><option value="telefono">Teléfono</option><option value="tablet">Tablet</option><option value="servidor">Servidor</option><option value="red">Red</option><option value="camara">Cámara</option><option value="otro">Otro</option></select>
+<!-- TECNOLOGÍA -->
+<div id="page-tecnologia" class="page">
+  <div class="page-tabs-wrap">
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="switchPageTab(this,'sub-equipos')">💻 Equipos</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-licencias')">🔑 Licencias</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-asignaciones')">👤 Asignaciones</button>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Equipo</th><th>Tipo</th><th>Marca/Modelo</th><th>Serie</th><th>Estado</th><th>Asignado a</th><th>Área</th><th>Acciones</th></tr></thead><tbody id="tbEquipos"></tbody></table></div>
   </div>
-</div>
 
-<div id="page-licencias" class="page">
-  <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button></div>
-  <div class="search-row">
-    <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
-    <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
-    <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
-  </div>
-  <div class="licenses-grid" id="licenciasGrid"></div>
-</div>
-
-<div id="page-asignaciones" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">👤 Asignaciones</span><button class="btn btn-primary btn-sm" onclick="openAsignacion()">+ Nueva</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Empleado</th><th>Empresa uso</th><th>Fecha</th><th>Condición</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbAsig"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-activos" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">📦 Todos los activos</span><button class="btn btn-primary btn-sm" onclick="openActivo()">+ Nuevo</button></div>
-    <div class="search-row">
-      <input type="text" id="searchActivo" placeholder="🔍 Buscar..." oninput="renderActivos()">
-      <select id="fCatActivo" onchange="renderActivos()"><option value="">Todas categorías</option></select>
-      <select id="fEmpActivo" onchange="renderActivos()"><option value="">Todas empresas</option></select>
-      <select id="fEstActivo" onchange="renderActivos()"><option value="">Todos estados</option><option>activo</option><option>baja</option></select>
+  <div id="sub-equipos" class="sub-page active">
+    <div class="card">
+      <div class="card-header"><span class="card-title">💻 Inventario de equipos tecnológicos</span><button class="btn btn-primary btn-sm" onclick="openEquipo()">+ Nuevo equipo</button></div>
+      <div class="search-row">
+        <input type="text" id="searchEquipo" placeholder="🔍 Buscar equipo..." oninput="renderEquipos()">
+        <select id="fAreaEquipo" onchange="renderEquipos()"><option value="">Todas las áreas</option></select>
+        <select id="fEstEquipo" onchange="renderEquipos()"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="asignado">Asignado</option><option value="mantenimiento">Mantenimiento</option><option value="baja">Baja</option></select>
+        <select id="fTipoEquipo" onchange="renderEquipos()"><option value="">Todos los tipos</option><option value="laptop">Laptop</option><option value="desktop">Desktop</option><option value="monitor">Monitor</option><option value="impresora">Impresora</option><option value="telefono">Teléfono</option><option value="tablet">Tablet</option><option value="servidor">Servidor</option><option value="red">Red</option><option value="camara">Cámara</option><option value="otro">Otro</option></select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Código</th><th>Equipo</th><th>Tipo</th><th>Marca/Modelo</th><th>Serie</th><th>Estado</th><th>Asignado a</th><th>Área</th><th>Acciones</th></tr></thead><tbody id="tbEquipos"></tbody></table></div>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa</th><th>Estado</th><th>Responsable</th><th>Costo</th><th>Acciones</th></tr></thead><tbody id="tbActivos"></tbody></table></div>
+  </div>
+
+  <div id="sub-licencias" class="sub-page">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button></div>
+    <div class="search-row">
+      <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
+      <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
+      <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
+    </div>
+    <div class="licenses-grid" id="licenciasGrid"></div>
+  </div>
+
+  <div id="sub-asignaciones" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">👤 Asignaciones</span><button class="btn btn-primary btn-sm" onclick="openAsignacion()">+ Nueva</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Empleado</th><th>Empresa uso</th><th>Fecha</th><th>Condición</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbAsig"></tbody></table></div>
+    </div>
   </div>
 </div>
 
-<div id="page-bodega" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">🏪 Bodega / Sin asignar</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa</th><th>Condición</th><th>Costo</th><th>Acción</th></tr></thead><tbody id="tbBodega"></tbody></table></div>
+<!-- INVENTARIO -->
+<div id="page-inventario" class="page">
+  <div class="page-tabs-wrap">
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="switchPageTab(this,'sub-activos')">📦 Activos</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-bodega')">🏪 Bodega</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-bajas')">🗑️ Bajas</button>
+    </div>
+  </div>
+
+  <div id="sub-activos" class="sub-page active">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📦 Todos los activos</span><button class="btn btn-primary btn-sm" onclick="openActivo()">+ Nuevo</button></div>
+      <div class="search-row">
+        <input type="text" id="searchActivo" placeholder="🔍 Buscar..." oninput="renderActivos()">
+        <select id="fCatActivo" onchange="renderActivos()"><option value="">Todas categorías</option></select>
+        <select id="fEmpActivo" onchange="renderActivos()"><option value="">Todas empresas</option></select>
+        <select id="fEstActivo" onchange="renderActivos()"><option value="">Todos estados</option><option>activo</option><option>baja</option></select>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa</th><th>Estado</th><th>Responsable</th><th>Costo</th><th>Acciones</th></tr></thead><tbody id="tbActivos"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-bodega" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏪 Bodega / Sin asignar</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Empresa</th><th>Condición</th><th>Costo</th><th>Acción</th></tr></thead><tbody id="tbBodega"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-bajas" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🗑️ Bajas</span><button class="btn btn-sm btn-danger" onclick="openBaja()">+ Registrar baja</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Autorizado por</th><th>Acción</th></tr></thead><tbody id="tbBajas"></tbody></table></div>
+    </div>
   </div>
 </div>
 
-<div id="page-bajas" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">🗑️ Bajas</span><button class="btn btn-sm btn-danger" onclick="openBaja()">+ Registrar</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Autorizado por</th><th>Acción</th></tr></thead><tbody id="tbBajas"></tbody></table></div>
+<!-- CATÁLOGOS -->
+<div id="page-catalogos" class="page">
+  <div class="page-tabs-wrap">
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="switchPageTab(this,'sub-categorias')">◈ Categorías</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-empleados')">👥 Empleados</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-areas')">🏬 Áreas</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-empresas')">🏢 Empresas</button>
+    </div>
+  </div>
+
+  <div id="sub-categorias" class="sub-page active">
+    <div class="card">
+      <div class="card-header"><span class="card-title">◈ Categorías de activos</span><button class="btn btn-primary btn-sm" onclick="openCategoria()">+ Nueva</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCategorias"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-empleados" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">👥 Empleados</span><button class="btn btn-primary btn-sm" onclick="openEmpleado()">+ Nuevo</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Cargo</th><th>Área</th><th>Empresa</th><th>Activos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbEmp"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-areas" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏬 Áreas</span><button class="btn btn-primary btn-sm" onclick="openArea()">+ Nueva</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Área</th><th>Empresa</th><th>Responsable</th><th>Equipos</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbAreas"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-empresas" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏢 Empresas</span><button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Nueva</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>RUC/NIT</th><th>Contacto</th><th>Activos propios</th><th>En uso</th><th>Acciones</th></tr></thead><tbody id="tbEmpresas"></tbody></table></div>
+    </div>
   </div>
 </div>
 
-<div id="page-empleados" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">👥 Empleados</span><button class="btn btn-primary btn-sm" onclick="openEmpleado()">+ Nuevo</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Cargo</th><th>Área</th><th>Empresa</th><th>Activos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbEmp"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-areas" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">🏬 Áreas</span><button class="btn btn-primary btn-sm" onclick="openArea()">+ Nueva</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Área</th><th>Empresa</th><th>Responsable</th><th>Equipos</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbAreas"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-empresas" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">🏢 Empresas</span><button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Nueva</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>RUC/NIT</th><th>Contacto</th><th>Activos propios</th><th>En uso</th><th>Acciones</th></tr></thead><tbody id="tbEmpresas"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-traslados" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">⇄ Traslados de responsable / empresa</span><button class="btn btn-primary btn-sm" onclick="openTraslado()">+ Registrar traslado</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>De</th><th>A</th><th>Empresa destino</th><th>Fecha</th><th>Motivo</th><th>Condición</th><th>Acciones</th></tr></thead><tbody id="tbTraslados"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-categorias" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">◈ Categorías de activos</span><button class="btn btn-primary btn-sm" onclick="openCategoria()">+ Nueva categoría</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCategorias"></tbody></table></div>
-  </div>
-</div>
-
-<div id="page-historial" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">📋 Historial de movimientos</span></div>
-    <div class="search-row"><select id="fHistTipo" onchange="renderHistorial()"><option value="">Todos los tipos</option><option value="alta">Alta</option><option value="asignacion">Asignación</option><option value="traslado">Traslado</option><option value="devolucion">Devolución</option><option value="baja">Baja</option></select></div>
-    <div id="historialList"></div>
-  </div>
-</div>
-
-<div id="page-depreciacion" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">📉 Depreciación</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Categoría</th><th>Costo orig.</th><th>Vida útil</th><th>Dep. anual</th><th>Valor actual</th><th>% Depreciado</th><th>Acción</th></tr></thead><tbody id="tbDepr"></tbody></table></div>
-  </div>
-</div>
-
+<!-- REPORTES -->
 <div id="page-reportes" class="page">
-  <div class="grid2">
-    <div class="card"><div class="card-header"><span class="card-title">🖨️ Hoja de entrega</span></div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Hoja firmada con cláusula de responsabilidad.</p>
-      <div class="fgroup"><label>Empleado</label><select id="rptEmp"></select></div>
-      <button class="btn btn-primary btn-sm" onclick="printHoja()">Imprimir hoja de entrega</button>
-    </div>
-    <div class="card"><div class="card-header"><span class="card-title">📊 Informe contabilidad</span></div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Reporte anual con depreciación.</p>
-      <div class="form-row"><div class="fgroup"><label>Empresa</label><select id="rptEmpresa"><option value="">Todas</option></select></div><div class="fgroup"><label>Año</label><select id="rptAnio"><option>2024</option><option selected>2025</option><option>2026</option></select></div></div>
-      <button class="btn btn-primary btn-sm" onclick="printContabilidad()">Generar informe</button>
-    </div>
-    <div class="card"><div class="card-header"><span class="card-title">👤 Expediente empleado</span></div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Historial completo (útil para liquidaciones).</p>
-      <div class="fgroup"><label>Empleado</label><select id="rptExpEmp"></select></div>
-      <button class="btn btn-primary btn-sm" onclick="printExpediente()">Ver expediente</button>
-    </div>
-    <div class="card"><div class="card-header"><span class="card-title">🔑 Reporte de licencias</span></div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Licencias con costos y vencimientos.</p>
-      <div class="fgroup"><label>Empresa</label><select id="rptLicEmp"><option value="">Todas</option></select></div>
-      <button class="btn btn-primary btn-sm" onclick="printLicencias()">Generar reporte</button>
+  <div class="page-tabs-wrap">
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="switchPageTab(this,'sub-historial')">📋 Historial</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-traslados')">⇄ Traslados</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-depreciacion')">📉 Depreciación</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-impresion')">🖨️ Impresión</button>
     </div>
   </div>
-</div>
 
-<div id="page-usuarios" class="page">
-  <div class="card">
-    <div class="card-header"><span class="card-title">⚙️ Usuarios</span><button class="btn btn-primary btn-sm" onclick="openUsuario()">+ Nuevo</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Empresa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbUsuarios"></tbody></table></div>
-  </div>
-</div>
-
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
-
-<!-- Equipo -->
-<div class="overlay" id="ovEquipo">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mEquipoTitle">Nuevo equipo</span><button class="modal-close" onclick="closeModal('ovEquipo')">×</button></div>
-    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'teG')">General</button><button class="tab-btn" onclick="switchTab(this,'teE')">Especificaciones</button><button class="tab-btn" onclick="switchTab(this,'teC')">Compra</button></div>
-    <div id="teG" class="tab-pane active">
-      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"><option value="laptop">💻 Laptop</option><option value="desktop">🖥️ Desktop</option><option value="monitor">🖥 Monitor</option><option value="impresora">🖨️ Impresora</option><option value="telefono">📱 Teléfono</option><option value="tablet">📟 Tablet</option><option value="servidor">🗄️ Servidor</option><option value="red">🌐 Red</option><option value="camara">📷 Cámara</option><option value="otro">📦 Otro</option></select></div></div>
-      <div class="fgroup"><label>Descripción *</label><input id="eqDesc" placeholder="Ej: Laptop Dell Latitude 5520"></div>
-      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="eqMarca"></div><div class="fgroup"><label>Modelo</label><input id="eqModelo"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="eqSerie"></div><div class="fgroup"><label>Color</label><input id="eqColor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Empresa propietaria</label><select id="eqEmpresa"></select></div><div class="fgroup"><label>Área</label><select id="eqArea"><option value="">Sin área</option></select></div></div>
-      <div class="form-row"><div class="fgroup"><label>Asignado a</label><select id="eqEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Estado</label><select id="eqEstado"><option value="disponible">✅ Disponible</option><option value="asignado">👤 Asignado</option><option value="mantenimiento">🔧 Mantenimiento</option><option value="baja">❌ Baja</option></select></div></div>
-      <div class="fgroup"><label>Condición</label><select id="eqCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div>
-      <div class="fgroup"><label>Observaciones / Estado actual</label><textarea id="eqObs" placeholder="Estado del equipo, notas importantes..."></textarea></div>
+  <div id="sub-historial" class="sub-page active">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📋 Historial de movimientos</span></div>
+      <div class="search-row"><select id="fHistTipo" onchange="renderHistorial()"><option value="">Todos los tipos</option><option value="alta">Alta</option><option value="asignacion">Asignación</option><option value="traslado">Traslado</option><option value="devolucion">Devolución</option><option value="baja">Baja</option></select></div>
+      <div id="historialList"></div>
     </div>
-    <div id="teE" class="tab-pane">
-      <div class="form-row"><div class="fgroup"><label>Procesador / CPU</label><input id="eqCPU" placeholder="Intel Core i7-1165G7"></div><div class="fgroup"><label>Memoria RAM</label><input id="eqRAM" placeholder="16 GB DDR4"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Almacenamiento</label><input id="eqStorage" placeholder="512 GB SSD NVMe"></div><div class="fgroup"><label>Sistema operativo</label><input id="eqSO" placeholder="Windows 11 Pro"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Pantalla / Tamaño</label><input id="eqPantalla" placeholder='14" FHD'></div><div class="fgroup"><label>Tarjeta gráfica</label><input id="eqGPU" placeholder="Intel Iris Xe"></div></div>
-      <div class="form-row"><div class="fgroup"><label>MAC / IP</label><input id="eqMAC" placeholder="00:1A:2B:3C:4D:5E"></div><div class="fgroup"><label>Nombre en red</label><input id="eqHostname" placeholder="PC-RRHH-01"></div></div>
-      <div class="fgroup"><label>Especificaciones adicionales</label><textarea id="eqEspec"></textarea></div>
-      <div class="fgroup"><label>Accesorios incluidos</label>
-        <div id="eqAccList" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px"><input id="newEqAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addEqAcc()">+ Agregar</button></div>
+  </div>
+
+  <div id="sub-traslados" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">⇄ Traslados</span><button class="btn btn-primary btn-sm" onclick="openTraslado()">+ Registrar traslado</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Activo</th><th>De</th><th>A</th><th>Empresa destino</th><th>Fecha</th><th>Motivo</th><th>Condición</th><th>Acciones</th></tr></thead><tbody id="tbTraslados"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-depreciacion" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📉 Control de depreciación</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Categoría</th><th>Costo orig.</th><th>Vida útil</th><th>Dep. anual</th><th>Valor actual</th><th>% Depreciado</th><th>Acción</th></tr></thead><tbody id="tbDepr"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-impresion" class="sub-page">
+    <div class="grid2">
+      <div class="card"><div class="card-header"><span class="card-title">🖨️ Hoja de entrega</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Hoja firmada con cláusula de responsabilidad del empleado.</p>
+        <div class="fgroup"><label>Empleado</label><select id="rptEmp"></select></div>
+        <button class="btn btn-primary btn-sm" onclick="printHoja()">Imprimir hoja de entrega</button>
+      </div>
+      <div class="card"><div class="card-header"><span class="card-title">📊 Informe contabilidad</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Reporte anual con depreciación.</p>
+        <div class="form-row"><div class="fgroup"><label>Empresa</label><select id="rptEmpresa"><option value="">Todas</option></select></div><div class="fgroup"><label>Año</label><select id="rptAnio"><option>2024</option><option selected>2025</option><option>2026</option></select></div></div>
+        <button class="btn btn-primary btn-sm" onclick="printContabilidad()">Generar informe</button>
+      </div>
+      <div class="card"><div class="card-header"><span class="card-title">👤 Expediente empleado</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Historial completo (útil para liquidaciones).</p>
+        <div class="fgroup"><label>Empleado</label><select id="rptExpEmp"></select></div>
+        <button class="btn btn-primary btn-sm" onclick="printExpediente()">Ver expediente</button>
+      </div>
+      <div class="card"><div class="card-header"><span class="card-title">🔑 Reporte de licencias</span></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Licencias con costos y vencimientos.</p>
+        <div class="fgroup"><label>Empresa</label><select id="rptLicEmp"><option value="">Todas</option></select></div>
+        <button class="btn btn-primary btn-sm" onclick="printLicencias()">Generar reporte</button>
       </div>
     </div>
-    <div id="teC" class="tab-pane">
-      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="eqFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="eqProveedor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. factura</label><input id="eqFactura"></div><div class="fgroup"><label>Costo ($)</label><input id="eqCosto" type="number" min="0" step="0.01"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="eqGarantia" type="number" oninput="calcEqVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="eqVencGarantia" type="date"></div></div>
-      <div class="fgroup"><label>Vida útil (años)</label><input id="eqVidaUtil" type="number"></div>
+  </div>
+</div>
+
+<!-- SISTEMA -->
+<div id="page-sistema" class="page">
+  <div class="page-tabs-wrap">
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="switchPageTab(this,'sub-usuarios')">⚙️ Usuarios</button>
     </div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEquipo')">Cancelar</button><button class="btn btn-primary" onclick="saveEquipo()">Guardar equipo</button></div>
   </div>
-</div>
-
-<!-- Licencia -->
-<div class="overlay" id="ovLicencia">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModal('ovLicencia')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Fabricante / Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
-    <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad / Antivirus</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad / ERP</option><option value="otro">Otro</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>No. de licencia / Clave</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Cantidad de usuarios (seats)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Fecha de inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha de vencimiento</label><input id="licFechaVenc" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Asignada a (empleado)</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
-    <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar licencia</button></div>
-  </div>
-</div>
-
-<!-- Activo -->
-<div class="overlay" id="ovActivo">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mActivoTitle">Nuevo activo</span><button class="modal-close" onclick="closeModal('ovActivo')">×</button></div>
-    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'tG')">General</button><button class="tab-btn" onclick="switchTab(this,'tCom')">Compra / Garantía</button><button class="tab-btn" onclick="switchTab(this,'tCar')">Características</button></div>
-    <div id="tG" class="tab-pane active">
-      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="aCodigo"></div><div class="fgroup"><label>Empresa *</label><select id="aEmpresa"></select></div></div>
-      <div class="form-row"><div class="fgroup"><label>Categoría *</label><select id="aCategoria"></select></div><div class="fgroup"><label>Área</label><select id="aArea"><option value="">Sin área</option></select></div></div>
-      <div class="fgroup"><label>Descripción *</label><input id="aDesc"></div>
-      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="aMarca"></div><div class="fgroup"><label>Modelo</label><input id="aModelo"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="aSerie"></div><div class="fgroup"><label>Color</label><input id="aColor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="aCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Condición</label><select id="aCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div></div>
-      <div class="fgroup"><label>Notas</label><textarea id="aNotas"></textarea></div>
+  <div id="sub-usuarios" class="sub-page active">
+    <div class="card">
+      <div class="card-header"><span class="card-title">⚙️ Usuarios del sistema</span><button class="btn btn-primary btn-sm" onclick="openUsuario()">+ Nuevo</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Empresa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbUsuarios"></tbody></table></div>
     </div>
-    <div id="tCom" class="tab-pane">
-      <div class="alert alert-info">ℹ️ Los activos sin factura pueden dejar estos campos vacíos.</div>
-      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="aFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="aProveedor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de factura</label><input id="aFactura"></div><div class="fgroup"><label>Monto factura ($)</label><input id="aMontoFactura" type="number"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="aGarantia" type="number" oninput="calcVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="aVencGarantia" type="date"></div></div>
-      <div class="fgroup"><label>Vida útil (años)</label><input id="aVidaUtil" type="number"></div>
-    </div>
-    <div id="tCar" class="tab-pane">
-      <div class="fgroup"><label>Especificaciones</label><textarea id="aEspec"></textarea></div>
-      <div class="fgroup"><label>Accesorios incluidos</label>
-        <div id="accList" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px"><input id="newAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
-      </div>
-    </div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovActivo')">Cancelar</button><button class="btn btn-primary" onclick="saveActivo()">Guardar activo</button></div>
   </div>
 </div>
-
-<!-- Asignación -->
-<div class="overlay" id="ovAsig">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title">Nueva asignación</span><button class="modal-close" onclick="closeModal('ovAsig')">×</button></div>
-    <div class="alert alert-warning">⚠️ El empleado será responsable por daño o pérdida del equipo.</div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="asActivo"></select></div><div class="fgroup"><label>Empleado *</label><select id="asEmp"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa en uso</label><select id="asEmpUso"></select></div><div class="fgroup"><label>Fecha *</label><input id="asFecha" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Condición al entregar</label><select id="asCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Entregado por</label><input id="asEntregadoPor"></div></div>
-    <div class="fgroup"><label>Observaciones</label><textarea id="asObs"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovAsig')">Cancelar</button><button class="btn btn-primary" onclick="saveAsig()">Guardar asignación</button></div>
-  </div>
-</div>
-
-<!-- Baja -->
-<div class="overlay" id="ovBaja">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">Dar de baja activo</span><button class="modal-close" onclick="closeModal('ovBaja')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="baActivo"></select></div><div class="fgroup"><label>Fecha *</label><input id="baFecha" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Tipo *</label><select id="baTipo"><option value="falla">Falla / daño</option><option value="obsoleto">Obsoleto</option><option value="pieza">Pieza / parte</option><option value="robo">Robo / extravío</option><option value="donacion">Donación</option><option value="venta">Venta</option><option value="autorizado">Autorizado</option></select></div><div class="fgroup"><label>Autorizado por</label><input id="baAutorizado"></div></div>
-    <div class="fgroup"><label>Motivo</label><textarea id="baMotivo"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovBaja')">Cancelar</button><button class="btn btn-danger" onclick="saveBaja()">Dar de baja</button></div>
-  </div>
-</div>
-
-<!-- Empleado -->
-<div class="overlay" id="ovEmp">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mEmpTitle">Nuevo empleado</span><button class="modal-close" onclick="closeModal('ovEmp')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre completo *</label><input id="eNombre"></div><div class="fgroup"><label>DUI / Identificación</label><input id="eDUI"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Cargo *</label><input id="eCargo"></div><div class="fgroup"><label>Área</label><select id="eArea"><option value="">Sin área</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa *</label><select id="eEmpresa"></select></div><div class="fgroup"><label>Correo</label><input id="eCorreo" type="email"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Teléfono</label><input id="eTel"></div><div class="fgroup"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmp')">Cancelar</button><button class="btn btn-primary" onclick="saveEmp()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Área -->
-<div class="overlay" id="ovArea">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mAreaTitle">Nueva área</span><button class="modal-close" onclick="closeModal('ovArea')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="arNombre"></div><div class="fgroup"><label>Empresa *</label><select id="arEmpresa"></select></div></div>
-    <div class="fgroup"><label>Responsable</label><select id="arResp"><option value="">Sin responsable</option></select></div>
-    <div class="fgroup"><label>Descripción</label><textarea id="arDesc"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovArea')">Cancelar</button><button class="btn btn-primary" onclick="saveArea()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Empresa -->
-<div class="overlay" id="ovEmpresa">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mEmpresaTitle">Nueva empresa</span><button class="modal-close" onclick="closeModal('ovEmpresa')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="emNombre"></div><div class="fgroup"><label>RUC / NIT</label><input id="emRUC"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Contacto</label><input id="emContacto"></div><div class="fgroup"><label>Teléfono</label><input id="emTel"></div></div>
-    <div class="fgroup"><label>Dirección</label><textarea id="emDir"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmpresa')">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresa()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Usuario -->
-<div class="overlay" id="ovUser">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mUserTitle">Nuevo usuario</span><button class="modal-close" onclick="closeModal('ovUser')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Usuario *</label><input id="uUser" type="text" autocomplete="off"></div><div class="fgroup"><label>Contraseña</label><input id="uPass" type="password" placeholder="Dejar vacío para no cambiar"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre completo</label><input id="uNombre"></div><div class="fgroup"><label>Rol *</label><select id="uRol"><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="consulta">Solo consulta</option><option value="bodega">Bodega</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa</label><select id="uEmpresa"><option value="">Todas</option></select></div><div class="fgroup"><label>Estado</label><select id="uEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovUser')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Detalle -->
-<div class="overlay" id="ovDetalle">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mDetalleTitle">Detalle</span><button class="modal-close" onclick="closeModal('ovDetalle')">×</button></div>
-    <div id="detalleContent"></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovDetalle')">Cerrar</button><button class="btn btn-primary" id="btnEditDetalle">Editar</button></div>
-  </div>
-</div>
-
-<!-- Traslado -->
-<div class="overlay" id="ovTraslado">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title">Registrar traslado</span><button class="modal-close" onclick="closeModal('ovTraslado')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="trActivo" onchange="onTrActivoChange()"></select></div><div class="fgroup"><label>Fecha *</label><input id="trFecha" type="date"></div></div>
-    <div id="trInfoActual" style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">Seleccione un activo para ver el responsable actual.</div>
-    <div class="form-row"><div class="fgroup"><label>Nuevo responsable *</label><select id="trNuevoEmp"></select></div><div class="fgroup"><label>Empresa destino</label><select id="trEmpDest"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Condición al recibir</label><select id="trCondicion"><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Motivo</label><input id="trMotivo" placeholder="Motivo del traslado"></div></div>
-    <div class="fgroup"><label>Observaciones</label><textarea id="trObs"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovTraslado')">Cancelar</button><button class="btn btn-primary" onclick="saveTraslado()">Registrar traslado</button></div>
-  </div>
-</div>
-
-<!-- Categoría -->
-<div class="overlay" id="ovCategoria">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mCatTitle">Nueva categoría</span><button class="modal-close" onclick="closeModal('ovCategoria')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="cNombre" placeholder="Ej: Equipo informático"></div><div class="fgroup"><label>Tipo</label><select id="cTipo"><option value="tecnologico">Tecnológico</option><option value="mobiliario">Mobiliario</option><option value="gastronomico">Gastronómico</option><option value="vehiculo">Vehículo</option><option value="otro">Otro</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Vida útil (años)</label><input id="cVidaUtil" type="number" min="0"></div><div class="fgroup"><label>% Depreciación anual</label><input id="cDep" type="number" min="0"></div></div>
-    <div class="fgroup"><label>Descripción</label><textarea id="cDesc"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovCategoria')">Cancelar</button><button class="btn btn-primary" onclick="saveCategoria()">Guardar</button></div>
-  </div>
-</div>
-
-<div id="toast"></div>
-<div id="printArea"></div>
 
 <script>
 let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[]};
@@ -780,6 +638,15 @@ function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+function switchPageTab(btn,paneId){
+  const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
+  const page=btn.closest('.page');
+  page.querySelectorAll('.page-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  page.querySelectorAll('.sub-page').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById(paneId);
+  if(el){el.classList.add('active');}
+}
 function switchTab(btn,paneId){const t=btn.closest('.tabs');t.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const m=btn.closest('.modal');m.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.getElementById(paneId).classList.add('active');}
 function resetTabs(mid){const m=document.getElementById(mid);m.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));m.querySelectorAll('.tab-pane').forEach((p,i)=>p.classList.toggle('active',i===0));}
 function calcVenc(){const fc=v('aFechaCompra'),g=parseInt(v('aGarantia'))||0;if(fc&&g){const d=new Date(fc);d.setMonth(d.getMonth()+g);sv('aVencGarantia',d.toISOString().split('T')[0]);}}
