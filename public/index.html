@@ -161,7 +161,8 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div><div class="brand-name">AssetPro</div><div class="brand-sub">Gestión de activos</div></div>
     </div>
     <div class="company-wrap">
-      <select id="globalCompany" onchange="setGlobalCompany(this.value)">
+      <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:5px">Empresa activa</div>
+      <select id="globalCompany" onchange="setGlobalCompany(this.value)" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;font-family:inherit;cursor:pointer">
         <option value="">🏢 Todas las empresas</option>
       </select>
     </div>
@@ -179,10 +180,9 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="sidebar-footer">
       <div class="user-row">
         <div class="user-av" id="sidebarAv">A</div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="user-name" id="sidebarUser">Admin</div>
           <div class="user-rol" id="sidebarRol">Administrador</div>
-          <div id="sidebarEmpresa" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px"></div>
         </div>
       </div>
       <button class="btn-logout" onclick="doLogout()">← Cerrar sesión</button>
@@ -439,16 +439,15 @@ async function doLogin(){
   const r=await POST('login',{usuario,password});
   if(!r||r.error){document.getElementById('loginErr').style.display='block';return;}
   currentUser=r.user;
-  // Save in localStorage so session survives page refreshes
-  localStorage.setItem('ap_user', JSON.stringify(r.user));
-  localStorage.setItem('ap_creds', btoa(usuario+':'+password));
+  // Store credentials cookie for 30 days (survives server restarts)
+  const cred = btoa(usuario+':'+password);
+  document.cookie = `ap_cred=${cred}; Max-Age=2592000; Path=/; SameSite=Lax`;
   document.getElementById('loginErr').style.display='none';showApp();
 }
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 async function doLogout(){
   await POST('logout');
-  localStorage.removeItem('ap_user');
-  localStorage.removeItem('ap_creds');
+  document.cookie = 'ap_cred=; Max-Age=0; Path=/';
   showLogin();
 }
 function showLogin(){document.getElementById('loginScreen').style.display='flex';document.getElementById('app').classList.remove('show');}
@@ -461,15 +460,7 @@ function showApp(){
   // Show empresa in sidebar footer
   const empEl = document.getElementById('sidebarEmpresa');
   if(empEl) empEl.textContent = currentUser.empresaId ? '' : 'Todas las empresas';
-  loadAll().then(()=>{
-    const empEl = document.getElementById('sidebarEmpresa');
-    if(empEl && currentUser.empresaId){
-      const emp = cache.empresas.find(e=>String(e.id)===String(currentUser.empresaId));
-      if(emp) empEl.textContent = emp.nombre;
-    } else if(empEl) {
-      empEl.textContent = 'Todas las empresas';
-    }
-  });
+  loadAll();
   navigate('dashboard');
 }
 
@@ -490,7 +481,12 @@ async function loadAll(){
   keys.forEach((k,i)=>{if(results[i]&&Array.isArray(results[i]))cache[k]=results[i];});
   populateAllSelects();
 }
-function setGlobalCompany(v){globalEmp=v;const b=document.getElementById('companyBadge');if(v){const em=cache.empresas.find(e=>String(e.id)===v);b.textContent=em?em.nombre:'';b.style.display='';}else b.style.display='none';}
+function setGlobalCompany(v){
+  globalEmp=v;
+  const b=document.getElementById('companyBadge');
+  if(v){const em=cache.empresas.find(e=>String(e.id)===v);b.textContent=em?'🏢 '+em.nombre:'';b.style.display='';}
+  else b.style.display='none';
+}
 
 const empN=id=>(cache.empresas.find(x=>x.id==id)||{}).nombre||'-';
 const catN=id=>(cache.categorias.find(x=>x.id==id)||{}).nombre||'-';
@@ -513,7 +509,13 @@ const activoOpts=()=>cache.activos.filter(a=>a.estado==='activo').map(a=>`<optio
 const eqOpts=()=>cache.equipos.filter(e=>e.estado!=='baja').map(e=>`<option value="${e.id}">${e.codigo} — ${e.descripcion}</option>`).join('');
 
 function populateAllSelects(){
-  sel('globalCompany',empOpts(),'🏢 Todas las empresas');if(globalEmp)document.getElementById('globalCompany').value=globalEmp;
+  sel('globalCompany',empOpts(),'🏢 Todas las empresas');
+  // Auto-select user's company if assigned
+  if(!globalEmp && currentUser && currentUser.empresaId){
+    globalEmp = String(currentUser.empresaId);
+    setGlobalCompany(globalEmp);
+  }
+  if(globalEmp) document.getElementById('globalCompany').value=globalEmp;
   sel('fCatActivo',catOpts(),'Todas categorías');sel('fEmpActivo',empOpts(),'Todas empresas');
   sel('fAreaEquipo',areaOpts(),'Todas las áreas');
   sel('aEmpresa',empOpts());sel('aCategoria',catOpts());sel('aArea',areaOpts(),'Sin área');
@@ -1149,22 +1151,29 @@ let toastTimer;
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.style.background=type==='warning'?'var(--amber)':type==='danger'?'var(--red)':'#1e1e2e';t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 
 (async()=>{
-  // Try existing session cookie first
+  // 1. Try existing session cookie first
   const r = await fetch('/api/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
   if(r&&r.id){ currentUser=r; showApp(); return; }
-  // Cookie expired or server restarted — try auto re-login from localStorage
-  const creds = localStorage.getItem('ap_creds');
-  if(creds){
+
+  // 2. Session lost (server restart) — try auto re-login from ap_cred cookie
+  const credCookie = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ap_cred='));
+  if(credCookie){
     try{
-      const decoded = atob(creds);
+      const decoded = atob(credCookie.split('=')[1]);
       const sep = decoded.indexOf(':');
       const usuario = decoded.slice(0, sep);
       const password = decoded.slice(sep+1);
-      const r2 = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({usuario,password})}).then(r=>r.json()).catch(()=>null);
-      if(r2&&r2.ok){ currentUser=r2.user; localStorage.setItem('ap_user',JSON.stringify(r2.user)); showApp(); return; }
+      const r2 = await fetch('/api/login',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body:JSON.stringify({usuario,password})
+      }).then(r=>r.json()).catch(()=>null);
+      if(r2&&r2.ok){ currentUser=r2.user; showApp(); return; }
     }catch(e){}
   }
-  // Nothing worked — show login screen
+
+  // 3. Nothing worked — show login screen
   showLogin();
 })();
 </script>
