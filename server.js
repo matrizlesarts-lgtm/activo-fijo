@@ -94,7 +94,23 @@ function parseBody(req) {
 }
 function getSession(req) {
   const m = (req.headers.cookie || '').match(/session=([^;]+)/);
-  return m ? db.sesiones[m[1]] || null : null;
+  if (!m) return null;
+  const token = m[1];
+  // First check in-memory sessions
+  if (db.sesiones[token]) return db.sesiones[token];
+  // Fallback: decode token directly (survives server restarts)
+  try {
+    const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+    if (decoded.userId && decoded.rol) {
+      const user = db.usuarios.find(u => u.id === decoded.userId && u.estado === 'activo');
+      if (user) {
+        // Restore session in memory
+        db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
+        return db.sesiones[token];
+      }
+    }
+  } catch(e) {}
+  return null;
 }
 function requireAuth(req, res) {
   const s = getSession(req);
@@ -159,7 +175,9 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const user = db.usuarios.find(u => u.usuario === body.usuario && u.password === body.password && u.estado === 'activo');
       if (!user) return jsonRes(res, 401, { error: 'Credenciales incorrectas' });
-      const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      // Token = base64(userId.rol.empresaId.timestamp) — survives server restarts
+      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId, ts: Date.now() })).toString('base64');
+      const token = payload;
       db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       saveDB(db);
       res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`, 'Access-Control-Allow-Origin':'*' });
