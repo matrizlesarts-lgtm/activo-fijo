@@ -434,10 +434,19 @@ async function doLogin(){
   const password=document.getElementById('loginPass').value;
   const r=await POST('login',{usuario,password});
   if(!r||r.error){document.getElementById('loginErr').style.display='block';return;}
-  currentUser=r.user;document.getElementById('loginErr').style.display='none';showApp();
+  currentUser=r.user;
+  // Save in localStorage so session survives page refreshes
+  localStorage.setItem('ap_user', JSON.stringify(r.user));
+  localStorage.setItem('ap_creds', btoa(usuario+':'+password));
+  document.getElementById('loginErr').style.display='none';showApp();
 }
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-async function doLogout(){await POST('logout');showLogin();}
+async function doLogout(){
+  await POST('logout');
+  localStorage.removeItem('ap_user');
+  localStorage.removeItem('ap_creds');
+  showLogin();
+}
 function showLogin(){document.getElementById('loginScreen').style.display='flex';document.getElementById('app').classList.remove('show');}
 function showApp(){
   document.getElementById('loginScreen').style.display='none';
@@ -1123,7 +1132,25 @@ async function eliminarFicha(id) {
 let toastTimer;
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.style.background=type==='warning'?'var(--amber)':type==='danger'?'var(--red)':'#1e1e2e';t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 
-(async()=>{const r=await fetch('/api/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);if(r&&r.id){currentUser=r;showApp();}})();
+(async()=>{
+  // Try existing session cookie first
+  const r = await fetch('/api/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+  if(r&&r.id){ currentUser=r; showApp(); return; }
+  // Cookie expired or server restarted — try auto re-login from localStorage
+  const creds = localStorage.getItem('ap_creds');
+  if(creds){
+    try{
+      const decoded = atob(creds);
+      const sep = decoded.indexOf(':');
+      const usuario = decoded.slice(0, sep);
+      const password = decoded.slice(sep+1);
+      const r2 = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({usuario,password})}).then(r=>r.json()).catch(()=>null);
+      if(r2&&r2.ok){ currentUser=r2.user; localStorage.setItem('ap_user',JSON.stringify(r2.user)); showApp(); return; }
+    }catch(e){}
+  }
+  // Nothing worked — show login screen
+  showLogin();
+})();
 </script>
 
 <!-- ══════════════════════════════════════════════════════════
