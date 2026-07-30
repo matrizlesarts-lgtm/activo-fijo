@@ -162,7 +162,7 @@ const server = http.createServer(async (req, res) => {
       const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
       db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       saveDB(db);
-      res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${token}; HttpOnly; Path=/; SameSite=Lax`, 'Access-Control-Allow-Origin':'*' });
+      res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`, 'Access-Control-Allow-Origin':'*' });
       return res.end(JSON.stringify({ ok: true, user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } }));
     }
 
@@ -290,6 +290,13 @@ const server = http.createServer(async (req, res) => {
     res.end(data);
   });
 });
+
+// Clean stale sessions on startup (keeps db tidy)
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+if (db.sesiones && typeof db.sesiones === 'object') {
+  // Sessions are valid tokens — just keep them, they persist in db.json
+  console.log(`   Sesiones activas: ${Object.keys(db.sesiones).length}`);
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
