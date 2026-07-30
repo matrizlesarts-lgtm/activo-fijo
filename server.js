@@ -92,6 +92,7 @@ function initDB() {
     ],
     equipos: [],
     licencias: [],
+    fichas: [],
     sesiones: {}
   };
 }
@@ -250,7 +251,7 @@ const server = http.createServer(async (req, res) => {
     if (!requireAuth(req, res)) return;
 
     // Tablas CRUD
-    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias'];
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
     if (TABLAS.includes(parts[1])) {
       return crudHandler(parts[1], req, res, parts);
     }
@@ -338,6 +339,99 @@ const server = http.createServer(async (req, res) => {
 
     return jsonRes(res, 404, { error: 'Ruta no encontrada' });
   }
+
+  // ── Ficha pública ────────────────────────────────────────────────────────────
+
+    // GET /ficha/:token → serve public form page
+    if (parts[0] === 'ficha' && parts[1] && req.method === 'GET') {
+      const token = parts[1];
+      const ficha = db.fichas.find(f => f.token === token);
+      if (!ficha) {
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px"><h2>Enlace no válido o expirado</h2></body></html>');
+      }
+      if (ficha.estado === 'completada') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end('<html><body style="font-family:sans-serif;text-align:center;padding:60px;color:#16a34a"><h2>✅ Tu ficha ya fue enviada</h2><p>El administrador la revisará pronto.</p></body></html>');
+      }
+      // Serve the public ficha form
+      const fs2 = require('fs');
+      const fichaHtml = fs2.readFileSync(require('path').join(__dirname, 'public', 'ficha.html'), 'utf8');
+      const page = fichaHtml
+        .replace('{{TOKEN}}', token)
+        .replace('{{NOMBRE}}', ficha.nombrePre || '')
+        .replace('{{EMPRESA}}', ficha.empresaNombre || '')
+        .replace('{{CARGO}}', ficha.cargoPre || '');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(page);
+    }
+
+    // POST /api/ficha-submit → employee submits their form
+    if (parts[0] === 'api' && parts[1] === 'ficha-submit' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const ficha = db.fichas.find(f => f.token === body.token);
+      if (!ficha) return jsonRes(res, 404, { error: 'Token inválido' });
+      Object.assign(ficha, body, { estado: 'completada', fechaEnvio: today() });
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true });
+    }
+
+    // POST /api/generar-ficha → admin generates link for employee
+    if (parts[0] === 'api' && parts[1] === 'generar-ficha' && req.method === 'POST') {
+      if (!requireAuth(req, res)) return;
+      const body = await parseBody(req);
+      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const ficha = {
+        id: nextId(db.fichas),
+        token,
+        estado: 'pendiente',
+        nombrePre: body.nombre || '',
+        cargoPre: body.cargo || '',
+        empresaId: body.empresaId || null,
+        empresaNombre: body.empresaNombre || '',
+        fechaCreacion: today(),
+        fechaEnvio: null
+      };
+      db.fichas.push(ficha);
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true, token, ficha });
+    }
+
+    // POST /api/aprobar-ficha/:id → admin approves and creates employee
+    if (parts[0] === 'api' && parts[1] === 'aprobar-ficha' && parts[2] && req.method === 'POST') {
+      if (!requireAuth(req, res)) return;
+      const body = await parseBody(req);
+      const fichaId = parseInt(parts[2]);
+      const fi = db.fichas.findIndex(f => f.id === fichaId);
+      if (fi < 0) return jsonRes(res, 404, { error: 'Ficha no encontrada' });
+      // Create employee from ficha data
+      const emp = {
+        id: nextId(db.empleados),
+        nombre: body.nombre || db.fichas[fi].nombre || '',
+        dui: body.dui || db.fichas[fi].dui || '',
+        cargo: body.cargo || db.fichas[fi].cargo || '',
+        areaId: body.areaId || null,
+        empresaId: body.empresaId || db.fichas[fi].empresaId || null,
+        correo: body.correo || db.fichas[fi].correo || '',
+        telefono: body.telefono || db.fichas[fi].telefono || '',
+        estado: 'activo',
+        fotoUrl: db.fichas[fi].fotoUrl || ''
+      };
+      db.empleados.push(emp);
+      db.fichas[fi].estado = 'aprobada';
+      db.fichas[fi].empleadoId = emp.id;
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true, empleado: emp });
+    }
+
+    // DELETE /api/fichas/:id
+    if (parts[0] === 'api' && parts[1] === 'fichas' && parts[2] && req.method === 'DELETE') {
+      if (!requireAuth(req, res)) return;
+      const id = parseInt(parts[2]);
+      db.fichas = db.fichas.filter(f => f.id !== id);
+      saveDB(db);
+      return jsonRes(res, 200, { ok: true });
+    }
 
   // ── Archivos estáticos ─────────────────────────────────────────────────────
   let filePath = pathname === '/' ? '/index.html' : pathname;
