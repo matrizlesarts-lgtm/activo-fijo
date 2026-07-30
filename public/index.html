@@ -179,7 +179,11 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="sidebar-footer">
       <div class="user-row">
         <div class="user-av" id="sidebarAv">A</div>
-        <div><div class="user-name" id="sidebarUser">Admin</div><div class="user-rol" id="sidebarRol">Administrador</div></div>
+        <div>
+          <div class="user-name" id="sidebarUser">Admin</div>
+          <div class="user-rol" id="sidebarRol">Administrador</div>
+          <div id="sidebarEmpresa" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px"></div>
+        </div>
       </div>
       <button class="btn-logout" onclick="doLogout()">← Cerrar sesión</button>
     </div>
@@ -454,7 +458,19 @@ function showApp(){
   document.getElementById('sidebarUser').textContent=currentUser.nombre||currentUser.usuario;
   document.getElementById('sidebarRol').textContent=currentUser.rol;
   document.getElementById('sidebarAv').textContent=(currentUser.nombre||currentUser.usuario).slice(0,2).toUpperCase();
-  loadAll();navigate('dashboard');
+  // Show empresa in sidebar footer
+  const empEl = document.getElementById('sidebarEmpresa');
+  if(empEl) empEl.textContent = currentUser.empresaId ? '' : 'Todas las empresas';
+  loadAll().then(()=>{
+    const empEl = document.getElementById('sidebarEmpresa');
+    if(empEl && currentUser.empresaId){
+      const emp = cache.empresas.find(e=>String(e.id)===String(currentUser.empresaId));
+      if(emp) empEl.textContent = emp.nombre;
+    } else if(empEl) {
+      empEl.textContent = 'Todas las empresas';
+    }
+  });
+  navigate('dashboard');
 }
 
 const TITLES={dashboard:'Dashboard',equipos:'💻 Equipos tecnológicos',licencias:'🔑 Licencias de software',asignaciones:'👤 Asignaciones',activos:'📦 Activos',bodega:'🏪 Bodega',bajas:'🗑️ Bajas',empleados:'👥 Empleados',areas:'🏬 Áreas',empresas:'🏢 Empresas',traslados:'⇄ Traslados',categorias:'◈ Categorías',historial:'📋 Historial',depreciacion:'📉 Depreciación',reportes:'🖨️ Reportes',usuarios:'⚙️ Usuarios'};
