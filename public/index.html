@@ -168,6 +168,8 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="nav-item" data-page="areas"><span class="nav-icon">🏬</span>Áreas</div>
       <div class="nav-item" data-page="empresas"><span class="nav-icon">🏢</span>Empresas</div>
       <div class="nav-section">Reportes</div>
+      <div class="nav-item" data-page="traslados"><span class="nav-icon">⇄</span>Traslados</div>
+      <div class="nav-item" data-page="categorias"><span class="nav-icon">◈</span>Categorías</div>
       <div class="nav-item" data-page="historial"><span class="nav-icon">📋</span>Historial</div>
       <div class="nav-item" data-page="depreciacion"><span class="nav-icon">📉</span>Depreciación</div>
       <div class="nav-item" data-page="reportes"><span class="nav-icon">🖨️</span>Reportes</div>
@@ -259,7 +261,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="page-bajas" class="page">
   <div class="card">
     <div class="card-header"><span class="card-title">🗑️ Bajas</span><button class="btn btn-sm btn-danger" onclick="openBaja()">+ Registrar</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Autorizado por</th></tr></thead><tbody id="tbBajas"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Tipo</th><th>Fecha</th><th>Motivo</th><th>Autorizado por</th><th>Acción</th></tr></thead><tbody id="tbBajas"></tbody></table></div>
   </div>
 </div>
 
@@ -284,6 +286,20 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<div id="page-traslados" class="page">
+  <div class="card">
+    <div class="card-header"><span class="card-title">⇄ Traslados de responsable / empresa</span><button class="btn btn-primary btn-sm" onclick="openTraslado()">+ Registrar traslado</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>De</th><th>A</th><th>Empresa destino</th><th>Fecha</th><th>Motivo</th><th>Condición</th><th>Acciones</th></tr></thead><tbody id="tbTraslados"></tbody></table></div>
+  </div>
+</div>
+
+<div id="page-categorias" class="page">
+  <div class="card">
+    <div class="card-header"><span class="card-title">◈ Categorías de activos</span><button class="btn btn-primary btn-sm" onclick="openCategoria()">+ Nueva categoría</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCategorias"></tbody></table></div>
+  </div>
+</div>
+
 <div id="page-historial" class="page">
   <div class="card">
     <div class="card-header"><span class="card-title">📋 Historial de movimientos</span></div>
@@ -295,7 +311,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="page-depreciacion" class="page">
   <div class="card">
     <div class="card-header"><span class="card-title">📉 Depreciación</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Categoría</th><th>Costo orig.</th><th>Vida útil</th><th>Dep. anual</th><th>Valor actual</th><th>% Depreciado</th></tr></thead><tbody id="tbDepr"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Activo</th><th>Categoría</th><th>Costo orig.</th><th>Vida útil</th><th>Dep. anual</th><th>Valor actual</th><th>% Depreciado</th><th>Acción</th></tr></thead><tbody id="tbDepr"></tbody></table></div>
   </div>
 </div>
 
@@ -496,6 +512,30 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+<!-- Traslado -->
+<div class="overlay" id="ovTraslado">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Registrar traslado</span><button class="modal-close" onclick="closeModal('ovTraslado')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="trActivo" onchange="onTrActivoChange()"></select></div><div class="fgroup"><label>Fecha *</label><input id="trFecha" type="date"></div></div>
+    <div id="trInfoActual" style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">Seleccione un activo para ver el responsable actual.</div>
+    <div class="form-row"><div class="fgroup"><label>Nuevo responsable *</label><select id="trNuevoEmp"></select></div><div class="fgroup"><label>Empresa destino</label><select id="trEmpDest"></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Condición al recibir</label><select id="trCondicion"><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Motivo</label><input id="trMotivo" placeholder="Motivo del traslado"></div></div>
+    <div class="fgroup"><label>Observaciones</label><textarea id="trObs"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovTraslado')">Cancelar</button><button class="btn btn-primary" onclick="saveTraslado()">Registrar traslado</button></div>
+  </div>
+</div>
+
+<!-- Categoría -->
+<div class="overlay" id="ovCategoria">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mCatTitle">Nueva categoría</span><button class="modal-close" onclick="closeModal('ovCategoria')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="cNombre" placeholder="Ej: Equipo informático"></div><div class="fgroup"><label>Tipo</label><select id="cTipo"><option value="tecnologico">Tecnológico</option><option value="mobiliario">Mobiliario</option><option value="gastronomico">Gastronómico</option><option value="vehiculo">Vehículo</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Vida útil (años)</label><input id="cVidaUtil" type="number" min="0"></div><div class="fgroup"><label>% Depreciación anual</label><input id="cDep" type="number" min="0"></div></div>
+    <div class="fgroup"><label>Descripción</label><textarea id="cDesc"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovCategoria')">Cancelar</button><button class="btn btn-primary" onclick="saveCategoria()">Guardar</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 <div id="printArea"></div>
 
@@ -531,7 +571,7 @@ function showApp(){
   loadAll();navigate('dashboard');
 }
 
-const TITLES={dashboard:'Dashboard',equipos:'💻 Equipos tecnológicos',licencias:'🔑 Licencias de software',asignaciones:'👤 Asignaciones',activos:'📦 Activos',bodega:'🏪 Bodega',bajas:'🗑️ Bajas',empleados:'👥 Empleados',areas:'🏬 Áreas',empresas:'🏢 Empresas',historial:'📋 Historial',depreciacion:'📉 Depreciación',reportes:'🖨️ Reportes',usuarios:'⚙️ Usuarios'};
+const TITLES={dashboard:'Dashboard',equipos:'💻 Equipos tecnológicos',licencias:'🔑 Licencias de software',asignaciones:'👤 Asignaciones',activos:'📦 Activos',bodega:'🏪 Bodega',bajas:'🗑️ Bajas',empleados:'👥 Empleados',areas:'🏬 Áreas',empresas:'🏢 Empresas',traslados:'⇄ Traslados',categorias:'◈ Categorías',historial:'📋 Historial',depreciacion:'📉 Depreciación',reportes:'🖨️ Reportes',usuarios:'⚙️ Usuarios'};
 function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
@@ -540,7 +580,7 @@ function navigate(page){
   renderPage(page);
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
-function renderPage(p){const fn={dashboard:renderDashboard,equipos:renderEquipos,licencias:renderLicencias,asignaciones:renderAsignaciones,activos:renderActivos,bodega:renderBodega,bajas:renderBajas,empleados:renderEmpleados,areas:renderAreas,empresas:renderEmpresas,historial:renderHistorial,depreciacion:renderDepr,reportes:populateReportSelects,usuarios:renderUsuarios};if(fn[p])fn[p]();}
+function renderPage(p){const fn={dashboard:renderDashboard,equipos:renderEquipos,licencias:renderLicencias,asignaciones:renderAsignaciones,activos:renderActivos,bodega:renderBodega,bajas:renderBajas,empleados:renderEmpleados,areas:renderAreas,empresas:renderEmpresas,traslados:renderTraslados,categorias:renderCategorias,historial:renderHistorial,depreciacion:renderDepr,reportes:populateReportSelects,usuarios:renderUsuarios};if(fn[p])fn[p]();}
 
 async function loadAll(){
   const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias'];
@@ -580,7 +620,7 @@ function populateAllSelects(){
   sel('arEmpresa',empOpts());sel('arResp',empNmOpts(),'Sin responsable');
   sel('asActivo',activoOpts());sel('asEmp',empNmOpts());sel('asEmpUso',empOpts());
   sel('baActivo',activoOpts());sel('uEmpresa',empOpts(),'Todas');
-  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');
+  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
   populateReportSelects();
 }
 function populateReportSelects(){
@@ -707,7 +747,7 @@ function renderBodega(){
   const list=cache.activos.filter(a=>a.estado==='activo'&&!asigActual(a.id)&&(!globalEmp||String(a.empresaId)===globalEmp));
   document.getElementById('tbBodega').innerHTML=list.length?list.map(a=>`<tr><td><span class="mono">${a.codigo}</span></td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${empN(a.empresaId)}</td><td>${badge(a.condicion)}</td><td>$${(a.costo||0).toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})">Asignar →</button></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏪</div>Bodega vacía</div></td></tr>';
 }
-function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td></tr>`).join(''):'<tr><td colspan="5"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
+function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
 function renderEmpleados(){
   const list=cache.empleados.filter(e=>!globalEmp||String(e.empresaId)===globalEmp);
   document.getElementById('tbEmp').innerHTML=list.map(e=>{const n=cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;return`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div><span style="font-weight:500">${e.nombre}</span></div></td><td>${e.cargo}</td><td>${areaN(e.areaId)}</td><td>${empN(e.empresaId)}</td><td>${n}</td><td>${badge(e.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="verExpediente(${e.id})">Expediente</button><button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Sin empleados</div></td></tr>';
@@ -725,11 +765,11 @@ function renderAsignaciones(){
 function renderHistorial(){
   const fT=v('fHistTipo');
   const list=[...cache.historial].reverse().filter(h=>!fT||h.tipo===fT);
-  document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between">${tipoBadge(h.tipo)}<span style="font-size:11px;color:var(--text3)">${h.fecha}</span></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
+  document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">${tipoBadge(h.tipo)}<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">${h.fecha}</span><button class="btn btn-sm btn-danger" onclick="delRecord('historial',${h.id})" style="padding:2px 8px;font-size:11px">🗑</button></div></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
 }
 function renderDepr(){
   const list=cache.activos.filter(a=>a.estado==='activo'&&a.costo&&a.vidaUtil);
-  document.getElementById('tbDepr').innerHTML=list.map(a=>{const vu=a.vidaUtil||5,da=(a.costo||0)/vu,anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0,dt=Math.min(anos*da,a.costo||0),va=Math.max((a.costo||0)-dt,0),pct=Math.min((dt/(a.costo||1))*100,100),col=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--green)';return`<tr><td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text2)">${a.descripcion}</span></td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${vu}a</td><td>$${da.toFixed(2)}</td><td style="font-weight:600">$${va.toFixed(2)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div><span style="font-size:12px">${pct.toFixed(0)}%</span></div></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📉</div>Sin datos</div></td></tr>';
+  document.getElementById('tbDepr').innerHTML=list.map(a=>{const vu=a.vidaUtil||5,da=(a.costo||0)/vu,anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0,dt=Math.min(anos*da,a.costo||0),va=Math.max((a.costo||0)-dt,0),pct=Math.min((dt/(a.costo||1))*100,100),col=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--green)';return`<tr><td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text2)">${a.descripcion}</span></td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${vu}a</td><td>$${da.toFixed(2)}</td><td style="font-weight:600">$${va.toFixed(2)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div><span style="font-size:12px">${pct.toFixed(0)}%</span></div></td><td><button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})">🗑</button></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📉</div>Sin datos</div></td></tr>';
 }
 function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.usuarios.map(u=>`<tr><td><span class="mono">${u.usuario}</span></td><td>${u.nombre||'—'}</td><td>${badge(u.rol,'purple')}</td><td>${u.empresaId?empN(u.empresaId):'Todas'}</td><td>${badge(u.estado||'activo')}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">Sin usuarios</div></td></tr>';}
 
@@ -882,7 +922,7 @@ async function saveUser(){
   const data={usuario,nombre:v('uNombre'),rol:v('uRol'),empresaId:v('uEmpresa')||'',estado:v('uEstado')};if(pass)data.password=pass;
   try{const r=editingId.user?await PUT('usuarios/'+editingId.user,data):await POST('usuarios',{...data,password:pass});if(r&&!r.error){closeModal('ovUser');await loadAll();renderUsuarios();toast('Usuario guardado');}else toast('Error: '+(r&&r.error?r.error:'intente de nuevo'),'warning');}catch(e){toast('Error de conexión','warning');}
 }
-async function delRecord(tabla,id){if(!confirm('¿Eliminar este registro?'))return;await DEL(tabla+'/'+id);await loadAll();toast('Registro eliminado');const m={categorias:'categorias',empleados:'empleados',areas:'areas',empresas:'empresas',usuarios:'usuarios',licencias:'licencias'};if(m[tabla])renderPage(m[tabla]);}
+async function delRecord(tabla,id){if(!confirm('¿Eliminar este registro?'))return;await DEL(tabla+'/'+id);await loadAll();toast('Registro eliminado');const m={categorias:'categorias',traslados:'traslados',bajas:'bajas',empleados:'empleados',areas:'areas',empresas:'empresas',usuarios:'usuarios',licencias:'licencias',historial:'historial'};if(m[tabla])renderPage(m[tabla]);}
 async function eliminarActivo(id){if(!confirm('¿Eliminar este activo permanentemente?'))return;await DEL('activos/'+id);const aids=cache.asignaciones.filter(a=>a.activoId==id).map(a=>a.id);for(const aid of aids)await DEL('asignaciones/'+aid);await loadAll();renderActivos();toast('Activo eliminado');}
 async function eliminarAsignacion(id){if(!confirm('¿Eliminar este registro?'))return;await DEL('asignaciones/'+id);await loadAll();renderAsignaciones();toast('Asignación eliminada');}
 
@@ -926,6 +966,72 @@ function printLicencias(){
   const tm=list.filter(l=>l.tipo==='mensual').reduce((s,l)=>s+(l.costo||0),0);
   const ta=list.filter(l=>l.tipo==='anual').reduce((s,l)=>s+(l.costo||0),0);
   openPrintWin('<!DOCTYPE html><html><head><meta charset="UTF-8">'+printCSS+'</head><body><h1>'+empresa+'</h1><p style="text-align:center;color:#555;margin-bottom:20px">REPORTE DE LICENCIAS DE SOFTWARE</p><table><thead><tr><th>Nombre</th><th>Vendor</th><th>Tipo</th><th>Seats</th><th>Costo</th><th>Vencimiento</th><th>Asignado a</th></tr></thead><tbody>'+list.map(l=>'<tr><td>'+l.nombre+'</td><td>'+(l.vendor||'-')+'</td><td>'+(l.tipo||'-')+'</td><td>'+(l.seats||1)+'</td><td>$'+(l.costo||0).toFixed(2)+'</td><td>'+(l.fechaVenc||'Perpetua')+'</td><td>'+(l.empleadoId?empNm(l.empleadoId):'-')+'</td></tr>').join('')+'</tbody></table><p style="margin-top:12px"><strong>Total mensual:</strong> $'+tm.toFixed(2)+' | <strong>Total anual:</strong> $'+ta.toFixed(2)+'</p></body></html>');
+}
+
+function renderTraslados(){
+  document.getElementById('tbTraslados').innerHTML=cache.traslados.length
+    ?cache.traslados.map(t=>`<tr>
+      <td>${actC(t.activoId)}</td>
+      <td>${t.deEmpleadoId?empNm(t.deEmpleadoId):'—'}</td>
+      <td>${empNm(t.aEmpleadoId)}</td>
+      <td>${empN(t.empresaDestinoId)}</td>
+      <td>${t.fecha}</td>
+      <td>${t.motivo||'—'}</td>
+      <td>${badge(t.condicionRecibe)}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="delRecord('traslados',${t.id})">🗑</button></td>
+    </tr>`).join('')
+    :'<tr><td colspan="8"><div class="empty"><div class="empty-icon">⇄</div>Sin traslados</div></td></tr>';
+}
+
+function renderCategorias(){
+  document.getElementById('tbCategorias').innerHTML=cache.categorias.map(c=>{
+    const n=cache.activos.filter(a=>a.categoriaId==c.id).length;
+    return`<tr>
+      <td><span style="font-weight:500">${c.nombre}</span></td>
+      <td>${badge(c.tipo,'blue')}</td>
+      <td>${c.vidaUtil||'-'} años</td>
+      <td>${c.depreciacion||'-'}%</td>
+      <td>${n}</td>
+      <td><div class="btn-group">
+        <button class="btn btn-sm" onclick="openCategoria(${c.id})">Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="delRecord('categorias',${c.id})">🗑</button>
+      </div></td>
+    </tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">◈</div>Sin categorías</div></td></tr>';
+}
+
+function openTraslado(){
+  sv('trFecha',today());['trMotivo','trObs'].forEach(f=>sv(f,''));
+  document.getElementById('trInfoActual').textContent='Seleccione un activo para ver el responsable actual.';
+  openModal('ovTraslado');
+}
+function onTrActivoChange(){
+  const id=parseInt(v('trActivo'));
+  const a=cache.asignaciones.filter(x=>x.activoId==id&&x.estado==='activo').slice(-1)[0];
+  document.getElementById('trInfoActual').innerHTML=a
+    ?`Responsable actual: <strong>${empNm(a.empleadoId)}</strong> | Empresa: ${empN(a.empresaUsoId)}`
+    :'Este activo no tiene responsable actualmente.';
+}
+async function saveTraslado(){
+  const activoId=parseInt(v('trActivo'))||0,aEmpleadoId=parseInt(v('trNuevoEmp'))||0,fecha=v('trFecha');
+  if(!activoId||!aEmpleadoId||!fecha){toast('Complete los campos requeridos','warning');return;}
+  const r=await POST('traslado-responsable',{activoId,aEmpleadoId,empresaDestinoId:parseInt(v('trEmpDest'))||0,condicionRecibe:v('trCondicion'),motivo:v('trMotivo'),observaciones:v('trObs'),fecha});
+  if(r&&r.ok){closeModal('ovTraslado');await loadAll();renderTraslados();toast('Traslado registrado');}
+  else toast('Error al registrar','warning');
+}
+
+function openCategoria(id){
+  editingId.cat=id||null;
+  document.getElementById('mCatTitle').textContent=id?'Editar categoría':'Nueva categoría';
+  ['cNombre','cVidaUtil','cDep','cDesc'].forEach(f=>sv(f,''));
+  if(id){const c=cache.categorias.find(x=>x.id==id);if(c){sv('cNombre',c.nombre);sv('cTipo',c.tipo||'tecnologico');sv('cVidaUtil',c.vidaUtil||'');sv('cDep',c.depreciacion||'');sv('cDesc',c.descripcion||'');}}
+  openModal('ovCategoria');
+}
+async function saveCategoria(){
+  const nombre=v('cNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
+  const data={nombre,tipo:v('cTipo'),vidaUtil:parseInt(v('cVidaUtil'))||0,depreciacion:parseFloat(v('cDep'))||0,descripcion:v('cDesc')};
+  const r=editingId.cat?await PUT('categorias/'+editingId.cat,data):await POST('categorias',data);
+  if(r&&!r.error){closeModal('ovCategoria');await loadAll();renderCategorias();toast('Categoría guardada');}
+  else toast('Error al guardar','warning');
 }
 
 let toastTimer;
