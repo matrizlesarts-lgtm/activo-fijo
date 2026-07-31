@@ -420,6 +420,263 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALES
+══════════════════════════════════════════════════════════ -->
+
+<!-- Equipo -->
+<div class="overlay" id="ovEquipo">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mEquipoTitle">Nuevo equipo</span><button class="modal-close" onclick="closeModal('ovEquipo')">×</button></div>
+    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'teG')">General</button><button class="tab-btn" onclick="switchTab(this,'teE')">Especificaciones</button><button class="tab-btn" onclick="switchTab(this,'teC')">Compra</button></div>
+    <div id="teG" class="tab-pane active">
+      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"><option value="laptop">💻 Laptop</option><option value="desktop">🖥️ Desktop</option><option value="monitor">🖥 Monitor</option><option value="impresora">🖨️ Impresora</option><option value="telefono">📱 Teléfono</option><option value="tablet">📟 Tablet</option><option value="servidor">🗄️ Servidor</option><option value="red">🌐 Red</option><option value="camara">📷 Cámara</option><option value="otro">📦 Otro</option></select></div></div>
+      <div class="fgroup"><label>Descripción *</label><input id="eqDesc" placeholder="Ej: Laptop Dell Latitude 5520"></div>
+      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="eqMarca"></div><div class="fgroup"><label>Modelo</label><input id="eqModelo"></div></div>
+      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="eqSerie"></div><div class="fgroup"><label>Color</label><input id="eqColor"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Empresa propietaria</label><select id="eqEmpresa"></select></div><div class="fgroup"><label>Área</label><select id="eqArea"><option value="">Sin área</option></select></div></div>
+      <div class="form-row"><div class="fgroup"><label>Asignado a</label><select id="eqEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Estado</label><select id="eqEstado"><option value="disponible">✅ Disponible</option><option value="asignado">👤 Asignado</option><option value="mantenimiento">🔧 Mantenimiento</option><option value="baja">❌ Baja</option></select></div></div>
+      <div class="fgroup"><label>Condición</label><select id="eqCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div>
+      <div class="fgroup"><label>Observaciones</label><textarea id="eqObs" placeholder="Estado del equipo, notas..."></textarea></div>
+    </div>
+    <div id="teE" class="tab-pane">
+      <div class="form-row"><div class="fgroup"><label>Procesador / CPU</label><input id="eqCPU" placeholder="Intel Core i7"></div><div class="fgroup"><label>Memoria RAM</label><input id="eqRAM" placeholder="16 GB DDR4"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Almacenamiento</label><input id="eqStorage" placeholder="512 GB SSD"></div><div class="fgroup"><label>Sistema operativo</label><input id="eqSO" placeholder="Windows 11 Pro"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Pantalla</label><input id="eqPantalla" placeholder='14" FHD'></div><div class="fgroup"><label>Tarjeta gráfica</label><input id="eqGPU" placeholder="Intel Iris Xe"></div></div>
+      <div class="form-row"><div class="fgroup"><label>MAC / IP</label><input id="eqMAC" placeholder="00:1A:2B:3C:4D:5E"></div><div class="fgroup"><label>Nombre en red</label><input id="eqHostname" placeholder="PC-RRHH-01"></div></div>
+      <div class="fgroup"><label>Especificaciones adicionales</label><textarea id="eqEspec"></textarea></div>
+      <div class="fgroup"><label>Accesorios</label>
+        <div id="eqAccList" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px"><input id="newEqAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addEqAcc()">+ Agregar</button></div>
+      </div>
+    </div>
+    <div id="teC" class="tab-pane">
+      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="eqFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="eqProveedor"></div></div>
+      <div class="form-row"><div class="fgroup"><label>No. factura</label><input id="eqFactura"></div><div class="fgroup"><label>Costo ($)</label><input id="eqCosto" type="number" min="0" step="0.01"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="eqGarantia" type="number" oninput="calcEqVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="eqVencGarantia" type="date"></div></div>
+      <div class="fgroup"><label>Vida útil (años)</label><input id="eqVidaUtil" type="number"></div>
+    </div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovEquipo')">Cancelar</button><button class="btn btn-primary" onclick="saveEquipo()">Guardar equipo</button></div>
+  </div>
+</div>
+
+<!-- Licencia -->
+<div class="overlay" id="ovLicencia">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModal('ovLicencia')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
+    <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
+    <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Activo -->
+<div class="overlay" id="ovActivo">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mActivoTitle">Nuevo activo</span><button class="modal-close" onclick="closeModal('ovActivo')">×</button></div>
+    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'tG')">General</button><button class="tab-btn" onclick="switchTab(this,'tCom')">Compra / Garantía</button><button class="tab-btn" onclick="switchTab(this,'tCar')">Características</button></div>
+    <div id="tG" class="tab-pane active">
+      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="aCodigo"></div><div class="fgroup"><label>Empresa *</label><select id="aEmpresa"></select></div></div>
+      <div class="form-row"><div class="fgroup"><label>Categoría *</label><select id="aCategoria"></select></div><div class="fgroup"><label>Área</label><select id="aArea"><option value="">Sin área</option></select></div></div>
+      <div class="fgroup"><label>Descripción *</label><input id="aDesc"></div>
+      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="aMarca"></div><div class="fgroup"><label>Modelo</label><input id="aModelo"></div></div>
+      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="aSerie"></div><div class="fgroup"><label>Color</label><input id="aColor"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="aCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Condición</label><select id="aCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div></div>
+      <div class="fgroup"><label>Notas</label><textarea id="aNotas"></textarea></div>
+    </div>
+    <div id="tCom" class="tab-pane">
+      <div style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">ℹ️ Los activos sin factura pueden dejar estos campos vacíos.</div>
+      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="aFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="aProveedor"></div></div>
+      <div class="form-row"><div class="fgroup"><label>No. de factura</label><input id="aFactura"></div><div class="fgroup"><label>Monto factura ($)</label><input id="aMontoFactura" type="number"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="aGarantia" type="number" oninput="calcVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="aVencGarantia" type="date"></div></div>
+      <div class="fgroup"><label>Vida útil (años)</label><input id="aVidaUtil" type="number"></div>
+    </div>
+    <div id="tCar" class="tab-pane">
+      <div class="fgroup"><label>Especificaciones</label><textarea id="aEspec"></textarea></div>
+      <div class="fgroup"><label>Accesorios</label>
+        <div id="accList" style="margin-bottom:8px"></div>
+        <div style="display:flex;gap:8px"><input id="newAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
+      </div>
+    </div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovActivo')">Cancelar</button><button class="btn btn-primary" onclick="saveActivo()">Guardar activo</button></div>
+  </div>
+</div>
+
+<!-- Asignación -->
+<div class="overlay" id="ovAsig">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Nueva asignación</span><button class="modal-close" onclick="closeModal('ovAsig')">×</button></div>
+    <div style="background:var(--amber-bg);color:var(--amber);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">⚠️ El empleado será responsable por daño o pérdida del equipo.</div>
+    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="asActivo"></select></div><div class="fgroup"><label>Empleado *</label><select id="asEmp"></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Empresa en uso</label><select id="asEmpUso"></select></div><div class="fgroup"><label>Fecha *</label><input id="asFecha" type="date"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Condición al entregar</label><select id="asCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Entregado por</label><input id="asEntregadoPor"></div></div>
+    <div class="fgroup"><label>Observaciones</label><textarea id="asObs"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovAsig')">Cancelar</button><button class="btn btn-primary" onclick="saveAsig()">Guardar asignación</button></div>
+  </div>
+</div>
+
+<!-- Baja -->
+<div class="overlay" id="ovBaja">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Dar de baja activo</span><button class="modal-close" onclick="closeModal('ovBaja')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="baActivo"></select></div><div class="fgroup"><label>Fecha *</label><input id="baFecha" type="date"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Tipo *</label><select id="baTipo"><option value="falla">Falla / daño</option><option value="obsoleto">Obsoleto</option><option value="pieza">Pieza / parte</option><option value="robo">Robo / extravío</option><option value="donacion">Donación</option><option value="venta">Venta</option><option value="autorizado">Autorizado</option></select></div><div class="fgroup"><label>Autorizado por</label><input id="baAutorizado"></div></div>
+    <div class="fgroup"><label>Motivo</label><textarea id="baMotivo"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovBaja')">Cancelar</button><button class="btn btn-danger" onclick="saveBaja()">Dar de baja</button></div>
+  </div>
+</div>
+
+<!-- Empleado -->
+<div class="overlay" id="ovEmp">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mEmpTitle">Nuevo empleado</span><button class="modal-close" onclick="closeModal('ovEmp')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre completo *</label><input id="eNombre"></div><div class="fgroup"><label>DUI / Identificación</label><input id="eDUI"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Cargo *</label><input id="eCargo"></div><div class="fgroup"><label>Área</label><select id="eArea"><option value="">Sin área</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Empresa *</label><select id="eEmpresa"></select></div><div class="fgroup"><label>Correo</label><input id="eCorreo" type="email"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Teléfono</label><input id="eTel"></div><div class="fgroup"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmp')">Cancelar</button><button class="btn btn-primary" onclick="saveEmp()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Área -->
+<div class="overlay" id="ovArea">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mAreaTitle">Nueva área</span><button class="modal-close" onclick="closeModal('ovArea')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="arNombre"></div><div class="fgroup"><label>Empresa *</label><select id="arEmpresa"></select></div></div>
+    <div class="fgroup"><label>Responsable</label><select id="arResp"><option value="">Sin responsable</option></select></div>
+    <div class="fgroup"><label>Descripción</label><textarea id="arDesc"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovArea')">Cancelar</button><button class="btn btn-primary" onclick="saveArea()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Empresa -->
+<div class="overlay" id="ovEmpresa">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mEmpresaTitle">Nueva empresa</span><button class="modal-close" onclick="closeModal('ovEmpresa')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="emNombre"></div><div class="fgroup"><label>RUC / NIT</label><input id="emRUC"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Contacto</label><input id="emContacto"></div><div class="fgroup"><label>Teléfono</label><input id="emTel"></div></div>
+    <div class="fgroup"><label>Dirección</label><textarea id="emDir"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmpresa')">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresa()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Categoría -->
+<div class="overlay" id="ovCategoria">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mCatTitle">Nueva categoría</span><button class="modal-close" onclick="closeModal('ovCategoria')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="cNombre"></div><div class="fgroup"><label>Tipo</label><select id="cTipo"><option value="tecnologico">Tecnológico</option><option value="mobiliario">Mobiliario</option><option value="gastronomico">Gastronómico</option><option value="vehiculo">Vehículo</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Vida útil (años)</label><input id="cVidaUtil" type="number" min="0"></div><div class="fgroup"><label>% Depreciación anual</label><input id="cDep" type="number" min="0"></div></div>
+    <div class="fgroup"><label>Descripción</label><textarea id="cDesc"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovCategoria')">Cancelar</button><button class="btn btn-primary" onclick="saveCategoria()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Traslado -->
+<div class="overlay" id="ovTraslado">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title">Registrar traslado</span><button class="modal-close" onclick="closeModal('ovTraslado')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="trActivo" onchange="onTrActivoChange()"></select></div><div class="fgroup"><label>Fecha *</label><input id="trFecha" type="date"></div></div>
+    <div id="trInfoActual" style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">Seleccione un activo para ver el responsable actual.</div>
+    <div class="form-row"><div class="fgroup"><label>Nuevo responsable *</label><select id="trNuevoEmp"></select></div><div class="fgroup"><label>Empresa destino</label><select id="trEmpDest"></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Condición al recibir</label><select id="trCondicion"><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Motivo</label><input id="trMotivo"></div></div>
+    <div class="fgroup"><label>Observaciones</label><textarea id="trObs"></textarea></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovTraslado')">Cancelar</button><button class="btn btn-primary" onclick="saveTraslado()">Registrar traslado</button></div>
+  </div>
+</div>
+
+<!-- Usuario -->
+<div class="overlay" id="ovUser">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mUserTitle">Nuevo usuario</span><button class="modal-close" onclick="closeModal('ovUser')">×</button></div>
+    <div class="form-row"><div class="fgroup"><label>Usuario *</label><input id="uUser" type="text" autocomplete="off"></div><div class="fgroup"><label>Contraseña</label><input id="uPass" type="password" placeholder="Dejar vacío para no cambiar"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Nombre completo</label><input id="uNombre"></div><div class="fgroup"><label>Rol *</label><select id="uRol"><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="consulta">Solo consulta</option><option value="bodega">Bodega</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Empresa</label><select id="uEmpresa"><option value="">Todas</option></select></div><div class="fgroup"><label>Estado</label><select id="uEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovUser')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- Detalle -->
+<div class="overlay" id="ovDetalle">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mDetalleTitle">Detalle</span><button class="modal-close" onclick="closeModal('ovDetalle')">×</button></div>
+    <div id="detalleContent"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovDetalle')">Cerrar</button><button class="btn btn-primary" id="btnEditDetalle">Editar</button></div>
+  </div>
+</div>
+
+<!-- Generar Ficha -->
+<div class="overlay" id="ovGenerarFicha">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Generar enlace de registro</span><button class="modal-close" onclick="closeModal('ovGenerarFicha')">×</button></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">El enlace se envía al empleado por WhatsApp o correo para que complete su ficha.</p>
+    <div style="display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
+      <button id="gfBtnExistente" onclick="gfModo('existente')" style="flex:1;padding:9px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">👤 Empleado existente</button>
+      <button id="gfBtnNuevo" onclick="gfModo('nuevo')" style="flex:1;padding:9px;border:none;background:#fff;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">➕ Empleado nuevo</button>
+    </div>
+    <div id="gfPanelExistente">
+      <div class="fgroup">
+        <label>Seleccionar empleado *</label>
+        <select id="gfEmpleadoExistente" onchange="onGfEmpleadoChange()"><option value="">— Seleccionar —</option></select>
+      </div>
+      <div id="gfInfoEmpleado" style="display:none;background:var(--blue-bg);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:12px">
+        <div id="gfInfoNombre" style="font-weight:500"></div>
+        <div id="gfInfoDetalle" style="color:var(--text2);margin-top:3px"></div>
+      </div>
+    </div>
+    <div id="gfPanelNuevo" style="display:none">
+      <div class="fgroup"><label>Nombre (opcional)</label><input id="gfNombre" placeholder="Ej: Juan Carlos Ramos"></div>
+      <div class="form-row">
+        <div class="fgroup"><label>Cargo</label><input id="gfCargo" placeholder="Ej: Coordinador TI"></div>
+        <div class="fgroup"><label>Empresa</label><select id="gfEmpresa"></select></div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('ovGenerarFicha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="generarFicha()">Generar enlace</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enlace generado -->
+<div class="overlay" id="ovEnlace">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">✅ Enlace generado</span><button class="modal-close" onclick="closeModal('ovEnlace')">×</button></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Copia este enlace y envíaselo al empleado:</p>
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;font-family:monospace;font-size:12px;word-break:break-all;margin-bottom:14px;border:1px solid var(--border)" id="enlaceTexto"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn btn-primary btn-sm" onclick="copiarEnlace()">📋 Copiar enlace</button>
+      <button class="btn btn-sm" onclick="compartirEnlace()">📤 Compartir</button>
+    </div>
+    <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--radius)">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600">CÓDIGO QR</div>
+      <canvas id="qrCanvas" width="180" height="180" style="border-radius:8px"></canvas>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Escanea con la cámara del celular</div>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" onclick="closeModal('ovEnlace')">Listo</button></div>
+  </div>
+</div>
+
+<!-- Ver Ficha -->
+<div class="overlay" id="ovVerFicha">
+  <div class="modal modal-lg">
+    <div class="modal-header"><span class="modal-title" id="mFichaTitulo">Ficha del empleado</span><button class="modal-close" onclick="closeModal('ovVerFicha')">×</button></div>
+    <div id="fichaContent"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('ovVerFicha')">Cerrar</button>
+      <button class="btn btn-danger" id="btnRechazarFicha">Rechazar</button>
+      <button class="btn btn-primary" id="btnAprobarFicha">✓ Aprobar y crear empleado</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
 let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[]};
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;
@@ -1192,261 +1449,6 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
 })();
 </script>
 
-<!-- ══════════════════════════════════════════════════════════
-     MODALES
-══════════════════════════════════════════════════════════ -->
-
-<!-- Equipo -->
-<div class="overlay" id="ovEquipo">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mEquipoTitle">Nuevo equipo</span><button class="modal-close" onclick="closeModal('ovEquipo')">×</button></div>
-    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'teG')">General</button><button class="tab-btn" onclick="switchTab(this,'teE')">Especificaciones</button><button class="tab-btn" onclick="switchTab(this,'teC')">Compra</button></div>
-    <div id="teG" class="tab-pane active">
-      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"><option value="laptop">💻 Laptop</option><option value="desktop">🖥️ Desktop</option><option value="monitor">🖥 Monitor</option><option value="impresora">🖨️ Impresora</option><option value="telefono">📱 Teléfono</option><option value="tablet">📟 Tablet</option><option value="servidor">🗄️ Servidor</option><option value="red">🌐 Red</option><option value="camara">📷 Cámara</option><option value="otro">📦 Otro</option></select></div></div>
-      <div class="fgroup"><label>Descripción *</label><input id="eqDesc" placeholder="Ej: Laptop Dell Latitude 5520"></div>
-      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="eqMarca"></div><div class="fgroup"><label>Modelo</label><input id="eqModelo"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="eqSerie"></div><div class="fgroup"><label>Color</label><input id="eqColor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Empresa propietaria</label><select id="eqEmpresa"></select></div><div class="fgroup"><label>Área</label><select id="eqArea"><option value="">Sin área</option></select></div></div>
-      <div class="form-row"><div class="fgroup"><label>Asignado a</label><select id="eqEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Estado</label><select id="eqEstado"><option value="disponible">✅ Disponible</option><option value="asignado">👤 Asignado</option><option value="mantenimiento">🔧 Mantenimiento</option><option value="baja">❌ Baja</option></select></div></div>
-      <div class="fgroup"><label>Condición</label><select id="eqCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div>
-      <div class="fgroup"><label>Observaciones</label><textarea id="eqObs" placeholder="Estado del equipo, notas..."></textarea></div>
-    </div>
-    <div id="teE" class="tab-pane">
-      <div class="form-row"><div class="fgroup"><label>Procesador / CPU</label><input id="eqCPU" placeholder="Intel Core i7"></div><div class="fgroup"><label>Memoria RAM</label><input id="eqRAM" placeholder="16 GB DDR4"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Almacenamiento</label><input id="eqStorage" placeholder="512 GB SSD"></div><div class="fgroup"><label>Sistema operativo</label><input id="eqSO" placeholder="Windows 11 Pro"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Pantalla</label><input id="eqPantalla" placeholder='14" FHD'></div><div class="fgroup"><label>Tarjeta gráfica</label><input id="eqGPU" placeholder="Intel Iris Xe"></div></div>
-      <div class="form-row"><div class="fgroup"><label>MAC / IP</label><input id="eqMAC" placeholder="00:1A:2B:3C:4D:5E"></div><div class="fgroup"><label>Nombre en red</label><input id="eqHostname" placeholder="PC-RRHH-01"></div></div>
-      <div class="fgroup"><label>Especificaciones adicionales</label><textarea id="eqEspec"></textarea></div>
-      <div class="fgroup"><label>Accesorios</label>
-        <div id="eqAccList" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px"><input id="newEqAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addEqAcc()">+ Agregar</button></div>
-      </div>
-    </div>
-    <div id="teC" class="tab-pane">
-      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="eqFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="eqProveedor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. factura</label><input id="eqFactura"></div><div class="fgroup"><label>Costo ($)</label><input id="eqCosto" type="number" min="0" step="0.01"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="eqGarantia" type="number" oninput="calcEqVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="eqVencGarantia" type="date"></div></div>
-      <div class="fgroup"><label>Vida útil (años)</label><input id="eqVidaUtil" type="number"></div>
-    </div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEquipo')">Cancelar</button><button class="btn btn-primary" onclick="saveEquipo()">Guardar equipo</button></div>
-  </div>
-</div>
-
-<!-- Licencia -->
-<div class="overlay" id="ovLicencia">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModal('ovLicencia')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
-    <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
-    <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Activo -->
-<div class="overlay" id="ovActivo">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mActivoTitle">Nuevo activo</span><button class="modal-close" onclick="closeModal('ovActivo')">×</button></div>
-    <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'tG')">General</button><button class="tab-btn" onclick="switchTab(this,'tCom')">Compra / Garantía</button><button class="tab-btn" onclick="switchTab(this,'tCar')">Características</button></div>
-    <div id="tG" class="tab-pane active">
-      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="aCodigo"></div><div class="fgroup"><label>Empresa *</label><select id="aEmpresa"></select></div></div>
-      <div class="form-row"><div class="fgroup"><label>Categoría *</label><select id="aCategoria"></select></div><div class="fgroup"><label>Área</label><select id="aArea"><option value="">Sin área</option></select></div></div>
-      <div class="fgroup"><label>Descripción *</label><input id="aDesc"></div>
-      <div class="form-row"><div class="fgroup"><label>Marca</label><input id="aMarca"></div><div class="fgroup"><label>Modelo</label><input id="aModelo"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="aSerie"></div><div class="fgroup"><label>Color</label><input id="aColor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="aCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Condición</label><select id="aCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div></div>
-      <div class="fgroup"><label>Notas</label><textarea id="aNotas"></textarea></div>
-    </div>
-    <div id="tCom" class="tab-pane">
-      <div style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">ℹ️ Los activos sin factura pueden dejar estos campos vacíos.</div>
-      <div class="form-row"><div class="fgroup"><label>Fecha de compra</label><input id="aFechaCompra" type="date"></div><div class="fgroup"><label>Proveedor</label><input id="aProveedor"></div></div>
-      <div class="form-row"><div class="fgroup"><label>No. de factura</label><input id="aFactura"></div><div class="fgroup"><label>Monto factura ($)</label><input id="aMontoFactura" type="number"></div></div>
-      <div class="form-row"><div class="fgroup"><label>Garantía (meses)</label><input id="aGarantia" type="number" oninput="calcVenc()"></div><div class="fgroup"><label>Vencimiento garantía</label><input id="aVencGarantia" type="date"></div></div>
-      <div class="fgroup"><label>Vida útil (años)</label><input id="aVidaUtil" type="number"></div>
-    </div>
-    <div id="tCar" class="tab-pane">
-      <div class="fgroup"><label>Especificaciones</label><textarea id="aEspec"></textarea></div>
-      <div class="fgroup"><label>Accesorios</label>
-        <div id="accList" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px"><input id="newAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
-      </div>
-    </div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovActivo')">Cancelar</button><button class="btn btn-primary" onclick="saveActivo()">Guardar activo</button></div>
-  </div>
-</div>
-
-<!-- Asignación -->
-<div class="overlay" id="ovAsig">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title">Nueva asignación</span><button class="modal-close" onclick="closeModal('ovAsig')">×</button></div>
-    <div style="background:var(--amber-bg);color:var(--amber);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">⚠️ El empleado será responsable por daño o pérdida del equipo.</div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="asActivo"></select></div><div class="fgroup"><label>Empleado *</label><select id="asEmp"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa en uso</label><select id="asEmpUso"></select></div><div class="fgroup"><label>Fecha *</label><input id="asFecha" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Condición al entregar</label><select id="asCondicion"><option value="nuevo">Nuevo</option><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Entregado por</label><input id="asEntregadoPor"></div></div>
-    <div class="fgroup"><label>Observaciones</label><textarea id="asObs"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovAsig')">Cancelar</button><button class="btn btn-primary" onclick="saveAsig()">Guardar asignación</button></div>
-  </div>
-</div>
-
-<!-- Baja -->
-<div class="overlay" id="ovBaja">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">Dar de baja activo</span><button class="modal-close" onclick="closeModal('ovBaja')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="baActivo"></select></div><div class="fgroup"><label>Fecha *</label><input id="baFecha" type="date"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Tipo *</label><select id="baTipo"><option value="falla">Falla / daño</option><option value="obsoleto">Obsoleto</option><option value="pieza">Pieza / parte</option><option value="robo">Robo / extravío</option><option value="donacion">Donación</option><option value="venta">Venta</option><option value="autorizado">Autorizado</option></select></div><div class="fgroup"><label>Autorizado por</label><input id="baAutorizado"></div></div>
-    <div class="fgroup"><label>Motivo</label><textarea id="baMotivo"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovBaja')">Cancelar</button><button class="btn btn-danger" onclick="saveBaja()">Dar de baja</button></div>
-  </div>
-</div>
-
-<!-- Empleado -->
-<div class="overlay" id="ovEmp">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mEmpTitle">Nuevo empleado</span><button class="modal-close" onclick="closeModal('ovEmp')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre completo *</label><input id="eNombre"></div><div class="fgroup"><label>DUI / Identificación</label><input id="eDUI"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Cargo *</label><input id="eCargo"></div><div class="fgroup"><label>Área</label><select id="eArea"><option value="">Sin área</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa *</label><select id="eEmpresa"></select></div><div class="fgroup"><label>Correo</label><input id="eCorreo" type="email"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Teléfono</label><input id="eTel"></div><div class="fgroup"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmp')">Cancelar</button><button class="btn btn-primary" onclick="saveEmp()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Área -->
-<div class="overlay" id="ovArea">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mAreaTitle">Nueva área</span><button class="modal-close" onclick="closeModal('ovArea')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="arNombre"></div><div class="fgroup"><label>Empresa *</label><select id="arEmpresa"></select></div></div>
-    <div class="fgroup"><label>Responsable</label><select id="arResp"><option value="">Sin responsable</option></select></div>
-    <div class="fgroup"><label>Descripción</label><textarea id="arDesc"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovArea')">Cancelar</button><button class="btn btn-primary" onclick="saveArea()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Empresa -->
-<div class="overlay" id="ovEmpresa">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mEmpresaTitle">Nueva empresa</span><button class="modal-close" onclick="closeModal('ovEmpresa')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="emNombre"></div><div class="fgroup"><label>RUC / NIT</label><input id="emRUC"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Contacto</label><input id="emContacto"></div><div class="fgroup"><label>Teléfono</label><input id="emTel"></div></div>
-    <div class="fgroup"><label>Dirección</label><textarea id="emDir"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovEmpresa')">Cancelar</button><button class="btn btn-primary" onclick="saveEmpresa()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Categoría -->
-<div class="overlay" id="ovCategoria">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mCatTitle">Nueva categoría</span><button class="modal-close" onclick="closeModal('ovCategoria')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre *</label><input id="cNombre"></div><div class="fgroup"><label>Tipo</label><select id="cTipo"><option value="tecnologico">Tecnológico</option><option value="mobiliario">Mobiliario</option><option value="gastronomico">Gastronómico</option><option value="vehiculo">Vehículo</option><option value="otro">Otro</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Vida útil (años)</label><input id="cVidaUtil" type="number" min="0"></div><div class="fgroup"><label>% Depreciación anual</label><input id="cDep" type="number" min="0"></div></div>
-    <div class="fgroup"><label>Descripción</label><textarea id="cDesc"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovCategoria')">Cancelar</button><button class="btn btn-primary" onclick="saveCategoria()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Traslado -->
-<div class="overlay" id="ovTraslado">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title">Registrar traslado</span><button class="modal-close" onclick="closeModal('ovTraslado')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Activo *</label><select id="trActivo" onchange="onTrActivoChange()"></select></div><div class="fgroup"><label>Fecha *</label><input id="trFecha" type="date"></div></div>
-    <div id="trInfoActual" style="background:var(--blue-bg);color:var(--blue-dark);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px">Seleccione un activo para ver el responsable actual.</div>
-    <div class="form-row"><div class="fgroup"><label>Nuevo responsable *</label><select id="trNuevoEmp"></select></div><div class="fgroup"><label>Empresa destino</label><select id="trEmpDest"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Condición al recibir</label><select id="trCondicion"><option value="bueno">Bueno</option><option value="regular">Regular</option><option value="malo">Malo</option></select></div><div class="fgroup"><label>Motivo</label><input id="trMotivo"></div></div>
-    <div class="fgroup"><label>Observaciones</label><textarea id="trObs"></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovTraslado')">Cancelar</button><button class="btn btn-primary" onclick="saveTraslado()">Registrar traslado</button></div>
-  </div>
-</div>
-
-<!-- Usuario -->
-<div class="overlay" id="ovUser">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title" id="mUserTitle">Nuevo usuario</span><button class="modal-close" onclick="closeModal('ovUser')">×</button></div>
-    <div class="form-row"><div class="fgroup"><label>Usuario *</label><input id="uUser" type="text" autocomplete="off"></div><div class="fgroup"><label>Contraseña</label><input id="uPass" type="password" placeholder="Dejar vacío para no cambiar"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Nombre completo</label><input id="uNombre"></div><div class="fgroup"><label>Rol *</label><select id="uRol"><option value="admin">Administrador</option><option value="supervisor">Supervisor</option><option value="consulta">Solo consulta</option><option value="bodega">Bodega</option></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Empresa</label><select id="uEmpresa"><option value="">Todas</option></select></div><div class="fgroup"><label>Estado</label><select id="uEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option></select></div></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovUser')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Guardar</button></div>
-  </div>
-</div>
-
-<!-- Detalle -->
-<div class="overlay" id="ovDetalle">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mDetalleTitle">Detalle</span><button class="modal-close" onclick="closeModal('ovDetalle')">×</button></div>
-    <div id="detalleContent"></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovDetalle')">Cerrar</button><button class="btn btn-primary" id="btnEditDetalle">Editar</button></div>
-  </div>
-</div>
-
-<!-- Generar Ficha -->
-<div class="overlay" id="ovGenerarFicha">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">Generar enlace de registro</span><button class="modal-close" onclick="closeModal('ovGenerarFicha')">×</button></div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">El enlace se envía al empleado por WhatsApp o correo para que complete su ficha.</p>
-    <div style="display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
-      <button id="gfBtnExistente" onclick="gfModo('existente')" style="flex:1;padding:9px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">👤 Empleado existente</button>
-      <button id="gfBtnNuevo" onclick="gfModo('nuevo')" style="flex:1;padding:9px;border:none;background:#fff;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">➕ Empleado nuevo</button>
-    </div>
-    <div id="gfPanelExistente">
-      <div class="fgroup">
-        <label>Seleccionar empleado *</label>
-        <select id="gfEmpleadoExistente" onchange="onGfEmpleadoChange()"><option value="">— Seleccionar —</option></select>
-      </div>
-      <div id="gfInfoEmpleado" style="display:none;background:var(--blue-bg);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:12px">
-        <div id="gfInfoNombre" style="font-weight:500"></div>
-        <div id="gfInfoDetalle" style="color:var(--text2);margin-top:3px"></div>
-      </div>
-    </div>
-    <div id="gfPanelNuevo" style="display:none">
-      <div class="fgroup"><label>Nombre (opcional)</label><input id="gfNombre" placeholder="Ej: Juan Carlos Ramos"></div>
-      <div class="form-row">
-        <div class="fgroup"><label>Cargo</label><input id="gfCargo" placeholder="Ej: Coordinador TI"></div>
-        <div class="fgroup"><label>Empresa</label><select id="gfEmpresa"></select></div>
-      </div>
-    </div>
-    <div class="form-actions">
-      <button class="btn" onclick="closeModal('ovGenerarFicha')">Cancelar</button>
-      <button class="btn btn-primary" onclick="generarFicha()">Generar enlace</button>
-    </div>
-  </div>
-</div>
-
-<!-- Enlace generado -->
-<div class="overlay" id="ovEnlace">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-title">✅ Enlace generado</span><button class="modal-close" onclick="closeModal('ovEnlace')">×</button></div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Copia este enlace y envíaselo al empleado:</p>
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:14px;font-family:monospace;font-size:12px;word-break:break-all;margin-bottom:14px;border:1px solid var(--border)" id="enlaceTexto"></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn btn-primary btn-sm" onclick="copiarEnlace()">📋 Copiar enlace</button>
-      <button class="btn btn-sm" onclick="compartirEnlace()">📤 Compartir</button>
-    </div>
-    <div style="text-align:center;padding:16px;background:var(--surface2);border-radius:var(--radius)">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600">CÓDIGO QR</div>
-      <canvas id="qrCanvas" width="180" height="180" style="border-radius:8px"></canvas>
-      <div style="font-size:11px;color:var(--text3);margin-top:6px">Escanea con la cámara del celular</div>
-    </div>
-    <div class="form-actions"><button class="btn btn-primary" onclick="closeModal('ovEnlace')">Listo</button></div>
-  </div>
-</div>
-
-<!-- Ver Ficha -->
-<div class="overlay" id="ovVerFicha">
-  <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mFichaTitulo">Ficha del empleado</span><button class="modal-close" onclick="closeModal('ovVerFicha')">×</button></div>
-    <div id="fichaContent"></div>
-    <div class="form-actions">
-      <button class="btn" onclick="closeModal('ovVerFicha')">Cerrar</button>
-      <button class="btn btn-danger" id="btnRechazarFicha">Rechazar</button>
-      <button class="btn btn-primary" id="btnAprobarFicha">✓ Aprobar y crear empleado</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
 
 </body>
 </html>
