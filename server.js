@@ -223,6 +223,21 @@ const server = http.createServer(async (req, res) => {
       return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
     }
 
+    // Debug session (temporary)
+    if (parts[1] === 'debug-session' && req.method === 'GET') {
+      const cookies = req.headers.cookie || 'NO COOKIES';
+      const sess = getSession(req);
+      const hasSess = cookies.includes('session=');
+      const hasCred = cookies.includes('ap_cred=');
+      return jsonRes(res, 200, {
+        cookieHeader: cookies.substring(0, 200),
+        hasSessionCookie: hasSess,
+        hasCredCookie: hasCred,
+        sessionValid: !!sess,
+        sessionData: sess
+      });
+    }
+
     // Auth guard para el resto
     if (!requireAuth(req, res)) return;
 
