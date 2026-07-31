@@ -79,7 +79,7 @@ function initDB() {
 
 let db = loadDB();
 
-function nextId(arr) { return (arr.length === 0 ? 0 : Math.max(...arr.map(x => x.id))) + 1; }
+function nextId(arr) { if(!arr||arr.length===0) return 1; return Math.max(...arr.map(x => x.id||0)) + 1; }
 function today() { return new Date().toISOString().split('T')[0]; }
 function jsonRes(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -151,7 +151,7 @@ const server = http.createServer(async (req, res) => {
   const parsed   = url.parse(req.url, true);
   const pathname = parsed.pathname;
   const parts    = pathname.split('/').filter(Boolean);
-  console.log(`→ ${req.method} ${pathname} | cookies: ${(req.headers.cookie||'none').slice(0,80)}`);
+
 
   // ── Ficha pública: GET /ficha/:token ──────────────────────────────────────
   if (parts[0] === 'ficha' && parts[1] && req.method === 'GET') {
@@ -249,6 +249,7 @@ const server = http.createServer(async (req, res) => {
 
     // Generar ficha
     if (parts[1] === 'generar-ficha' && req.method === 'POST') {
+      if (!db.fichas) db.fichas = [];
       const body = await parseBody(req);
       const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
       const ficha = { id: nextId(db.fichas), token, estado: 'pendiente', nombrePre: body.nombre || '', cargoPre: body.cargo || '', empresaId: body.empresaId || null, empresaNombre: body.empresaNombre || '', empleadoExistenteId: body.empleadoId || null, fechaCreacion: today(), fechaEnvio: null };
