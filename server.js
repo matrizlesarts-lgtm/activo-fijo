@@ -93,23 +93,30 @@ function parseBody(req) {
   });
 }
 function getSession(req) {
+  // Check session cookie first
   const m = (req.headers.cookie || '').match(/session=([^;]+)/);
-  if (!m) return null;
-  const token = m[1];
-  // First check in-memory sessions
-  if (db.sesiones[token]) return db.sesiones[token];
-  // Fallback: decode token directly (survives server restarts)
-  try {
-    const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
-    if (decoded.userId && decoded.rol) {
-      const user = db.usuarios.find(u => u.id === decoded.userId && u.estado === 'activo');
-      if (user) {
-        // Restore session in memory
-        db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
-        return db.sesiones[token];
+  if (m) {
+    const token = decodeURIComponent(m[1]);
+    try {
+      const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+      if (decoded.userId && decoded.rol) {
+        const user = db.usuarios.find(u => u.id === decoded.userId && u.estado === 'activo');
+        if (user) return { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       }
-    }
-  } catch(e) {}
+    } catch(e) {}
+  }
+  // Check ap_cred cookie (browser-stored credentials fallback)
+  const m2 = (req.headers.cookie || '').match(/ap_cred=([^;]+)/);
+  if (m2) {
+    try {
+      const decoded = Buffer.from(decodeURIComponent(m2[1]), 'base64').toString('utf8');
+      const sep = decoded.indexOf(':');
+      const usuario = decoded.slice(0, sep);
+      const password = decoded.slice(sep + 1);
+      const user = db.usuarios.find(u => u.usuario === usuario && u.password === password && u.estado === 'activo');
+      if (user) return { userId: user.id, rol: user.rol, empresaId: user.empresaId };
+    } catch(e) {}
+  }
   return null;
 }
 function requireAuth(req, res) {
@@ -197,7 +204,15 @@ const server = http.createServer(async (req, res) => {
       const sess = getSession(req);
       if (!sess) return jsonRes(res, 401, { error: 'No autenticado' });
       const user = db.usuarios.find(u => u.id === sess.userId);
-      return jsonRes(res, 200, user ? { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } : { error: 'No encontrado' });
+      if (!user) return jsonRes(res, 401, { error: 'No encontrado' });
+      // Refresh session cookie on every /me call to keep it alive
+      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId, ts: Date.now() })).toString('base64');
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Set-Cookie': `session=${payload}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`,
+        'Access-Control-Allow-Origin': '*'
+      });
+      return res.end(JSON.stringify({ id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }));
     }
 
     // Health check
