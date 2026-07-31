@@ -96,9 +96,11 @@ function getSession(req) {
   // Check session cookie first
   const m = (req.headers.cookie || '').match(/session=([^;]+)/);
   if (m) {
-    const token = decodeURIComponent(m[1]);
     try {
-      const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+      // Restore URL-safe base64 padding
+      const raw = m[1].replace(/-/g,'+').replace(/_/g,'/');
+      const padded = raw + '=='.slice(0, (4 - raw.length % 4) % 4);
+      const decoded = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
       if (decoded.userId && decoded.rol) {
         const user = db.usuarios.find(u => u.id === decoded.userId && u.estado === 'activo');
         if (user) return { userId: user.id, rol: user.rol, empresaId: user.empresaId };
@@ -182,12 +184,12 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const user = db.usuarios.find(u => u.usuario === body.usuario && u.password === body.password && u.estado === 'activo');
       if (!user) return jsonRes(res, 401, { error: 'Credenciales incorrectas' });
-      // Token = base64(userId.rol.empresaId.timestamp) — survives server restarts
-      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId, ts: Date.now() })).toString('base64');
-      const token = payload;
-      db.sesiones[token] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
+      // Self-contained token — URL-safe base64, survives server restarts
+      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId }))
+        .toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+      db.sesiones[payload] = { userId: user.id, rol: user.rol, empresaId: user.empresaId };
       saveDB(db);
-      res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`, 'Access-Control-Allow-Origin':'*' });
+      res.writeHead(200, { 'Content-Type':'application/json', 'Set-Cookie':`session=${payload}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`, 'Access-Control-Allow-Origin':'*' });
       return res.end(JSON.stringify({ ok: true, user: { id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId } }));
     }
 
@@ -206,7 +208,8 @@ const server = http.createServer(async (req, res) => {
       const user = db.usuarios.find(u => u.id === sess.userId);
       if (!user) return jsonRes(res, 401, { error: 'No encontrado' });
       // Refresh session cookie on every /me call to keep it alive
-      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId, ts: Date.now() })).toString('base64');
+      const payload = Buffer.from(JSON.stringify({ userId: user.id, rol: user.rol, empresaId: user.empresaId }))
+        .toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
       res.writeHead(200, {
         'Content-Type': 'application/json',
         'Set-Cookie': `session=${payload}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000`,
