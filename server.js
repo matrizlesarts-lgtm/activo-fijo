@@ -142,6 +142,7 @@ function crudHandler(tabla, req, res, parts) {
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css', '.js':'application/javascript', '.json':'application/json', '.ico':'image/x-icon', '.png':'image/png', '.svg':'image/svg+xml' };
 
 const server = http.createServer(async (req, res) => {
+  try {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS', 'Access-Control-Allow-Headers':'Content-Type' });
     return res.end();
@@ -340,6 +341,13 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
     res.end(data);
   });
+  } catch(err) {
+    console.error('❌ Request error:', req.method, req.url, err.message, err.stack);
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+  }
 });
 
 // Clean stale sessions on startup (keeps db tidy)
@@ -348,6 +356,9 @@ if (db.sesiones && typeof db.sesiones === 'object') {
   // Sessions are valid tokens — just keep them, they persist in db.json
   console.log(`   Sesiones activas: ${Object.keys(db.sesiones).length}`);
 }
+
+process.on('uncaughtException', err => console.error('❌ Uncaught:', err.message, err.stack));
+process.on('unhandledRejection', err => console.error('❌ Unhandled rejection:', err));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
