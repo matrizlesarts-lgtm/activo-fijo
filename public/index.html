@@ -679,6 +679,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 
 <script>
 let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[]};
+let gfModoActivo='existente';
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;
 
 async function api(method,path,body){
@@ -702,7 +703,7 @@ async function doLogin(){
   document.getElementById('loginErr').style.display='none';
   showApp();
 }
-document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.addEventListener('DOMContentLoaded',()=>{const lp=document.getElementById('loginPass');if(lp)lp.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});});
 async function doLogout(){
   await POST('logout');
   document.cookie='ap_cred=; Max-Age=0; Path=/';
@@ -731,7 +732,10 @@ function navigate(page){
   document.getElementById('pageTitle').textContent=TITLES[page]||page;
   renderPage(page);
 }
-document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
+  document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+});
 function renderPage(p){
   const fn={
     dashboard: renderDashboard,
@@ -943,7 +947,6 @@ function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
   const page=btn.closest('.page');
@@ -957,10 +960,12 @@ function switchTab(btn,paneId){const t=btn.closest('.tabs');t.querySelectorAll('
 function resetTabs(mid){const m=document.getElementById(mid);m.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));m.querySelectorAll('.tab-pane').forEach((p,i)=>p.classList.toggle('active',i===0));}
 function calcVenc(){const fc=v('aFechaCompra'),g=parseInt(v('aGarantia'))||0;if(fc&&g){const d=new Date(fc);d.setMonth(d.getMonth()+g);sv('aVencGarantia',d.toISOString().split('T')[0]);}}
 function calcEqVenc(){const fc=v('eqFechaCompra'),g=parseInt(v('eqGarantia'))||0;if(fc&&g){const d=new Date(fc);d.setMonth(d.getMonth()+g);sv('eqVencGarantia',d.toISOString().split('T')[0]);}}
-document.getElementById('aFechaCompra').addEventListener('input',calcVenc);
-document.getElementById('aGarantia').addEventListener('input',calcVenc);
-document.getElementById('eqFechaCompra').addEventListener('input',calcEqVenc);
-document.getElementById('eqGarantia').addEventListener('input',calcEqVenc);
+document.addEventListener('DOMContentLoaded',()=>{
+  const afc=document.getElementById('aFechaCompra');if(afc)afc.addEventListener('input',calcVenc);
+  const ag=document.getElementById('aGarantia');if(ag)ag.addEventListener('input',calcVenc);
+  const efc=document.getElementById('eqFechaCompra');if(efc)efc.addEventListener('input',calcEqVenc);
+  const eg=document.getElementById('eqGarantia');if(eg)eg.addEventListener('input',calcEqVenc);
+});
 function addAcc(){const val=v('newAcc').trim();if(val){accs.push(val);sv('newAcc','');renderAccs();}}
 function removeAcc(i){accs.splice(i,1);renderAccs();}
 function renderAccs(){document.getElementById('accList').innerHTML=accs.map((a,i)=>`<span class="tag">${a} <span style="cursor:pointer" onclick="removeAcc(${i})">×</span></span>`).join('');}
@@ -1236,8 +1241,6 @@ function renderFichas() {
     : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div>No hay fichas generadas aún</div></td></tr>';
 }
 
-// Track which mode is active: 'existente' or 'nuevo'
-let gfModoActivo = 'existente';
 
 function gfModo(modo) {
   gfModoActivo = modo;
