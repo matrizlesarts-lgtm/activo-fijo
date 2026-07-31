@@ -439,15 +439,17 @@ async function doLogin(){
   const r=await POST('login',{usuario,password});
   if(!r||r.error){document.getElementById('loginErr').style.display='block';return;}
   currentUser=r.user;
-  // Store credentials cookie for 30 days (survives server restarts)
-  const cred = btoa(usuario+':'+password);
-  document.cookie = `ap_cred=${cred}; Max-Age=2592000; Path=/; SameSite=Lax`;
-  document.getElementById('loginErr').style.display='none';showApp();
+  // Save creds encoded - server reads this cookie directly as fallback
+  const cred=btoa(unescape(encodeURIComponent(usuario+':'+password)));
+  document.cookie='ap_cred='+cred+'; Max-Age=2592000; Path=/; SameSite=Lax';
+  document.getElementById('loginErr').style.display='none';
+  showApp();
 }
 document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 async function doLogout(){
   await POST('logout');
-  document.cookie = 'ap_cred=; Max-Age=0; Path=/';
+  document.cookie='ap_cred=; Max-Age=0; Path=/';
+  document.cookie='session=; Max-Age=0; Path=/';
   showLogin();
 }
 function showLogin(){document.getElementById('loginScreen').style.display='flex';document.getElementById('app').classList.remove('show');}
@@ -473,7 +475,17 @@ function navigate(page){
   renderPage(page);
 }
 document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
-function renderPage(p){const fn={dashboard:renderDashboard,equipos:renderEquipos,licencias:renderLicencias,asignaciones:renderAsignaciones,activos:renderActivos,bodega:renderBodega,bajas:renderBajas,empleados:renderEmpleados,areas:renderAreas,empresas:renderEmpresas,traslados:renderTraslados,categorias:renderCategorias,historial:renderHistorial,depreciacion:renderDepr,reportes:populateReportSelects,usuarios:renderUsuarios};if(fn[p])fn[p]();}
+function renderPage(p){
+  const fn={
+    dashboard: renderDashboard,
+    tecnologia: ()=>{ renderEquipos(); renderLicencias(); renderAsignaciones(); },
+    inventario: ()=>{ renderActivos(); renderBodega(); renderBajas(); },
+    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); },
+    reportes:   ()=>{ renderHistorial(); renderTraslados(); renderDepr(); populateReportSelects(); },
+    sistema:    ()=>{ renderUsuarios(); renderFichas(); }
+  };
+  if(fn[p])fn[p]();
+}
 
 async function loadAll(){
   const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias'];
@@ -510,11 +522,6 @@ const eqOpts=()=>cache.equipos.filter(e=>e.estado!=='baja').map(e=>`<option valu
 
 function populateAllSelects(){
   sel('globalCompany',empOpts(),'🏢 Todas las empresas');
-  // Auto-select user's company if assigned
-  if(!globalEmp && currentUser && currentUser.empresaId){
-    globalEmp = String(currentUser.empresaId);
-    setGlobalCompany(globalEmp);
-  }
   if(globalEmp) document.getElementById('globalCompany').value=globalEmp;
   sel('fCatActivo',catOpts(),'Todas categorías');sel('fEmpActivo',empOpts(),'Todas empresas');
   sel('fAreaEquipo',areaOpts(),'Todas las áreas');
@@ -561,7 +568,7 @@ function renderEquipos(){
   const q=v('searchEquipo').toLowerCase(),fA=v('fAreaEquipo'),fE=v('fEstEquipo'),fT=v('fTipoEquipo');
   const TI={laptop:'💻',desktop:'🖥️',monitor:'🖥',impresora:'🖨️',telefono:'📱',tablet:'📟',servidor:'🗄️',red:'🌐',camara:'📷',otro:'📦'};
   const list=cache.equipos.filter(e=>{
-    if(globalEmp&&String(e.empresaId)!==globalEmp)return false;
+    if(globalEmp&&e.empresaId&&String(e.empresaId)!==globalEmp)return false;
     if(fA&&String(e.areaId)!==fA)return false;
     if(fE&&e.estado!==fE)return false;
     if(fT&&e.tipo!==fT)return false;
@@ -595,7 +602,7 @@ function renderLicencias(){
   const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic');
   const CI={productividad:'📝',seguridad:'🛡️',diseno:'🎨',desarrollo:'💻',comunicacion:'💬',contabilidad:'📊',otro:'📦'};
   const list=cache.licencias.filter(l=>{
-    if(globalEmp&&String(l.empresaId)!==globalEmp)return false;
+    if(globalEmp&&l.empresaId&&String(l.empresaId)!==globalEmp)return false;
     if(fT&&l.tipo!==fT)return false;
     if(q&&!l.nombre.toLowerCase().includes(q)&&!(l.vendor||'').toLowerCase().includes(q))return false;
     const est=getLicEst(l).st;
@@ -625,7 +632,7 @@ function renderLicencias(){
 function renderActivos(){
   const q=v('searchActivo').toLowerCase(),fC=v('fCatActivo'),fE=v('fEmpActivo'),fS=v('fEstActivo');
   const list=cache.activos.filter(a=>{
-    if(globalEmp&&String(a.empresaId)!==globalEmp)return false;
+    if(globalEmp&&a.empresaId&&String(a.empresaId)!==globalEmp)return false;
     if(fC&&String(a.categoriaId)!==fC)return false;
     if(fE&&String(a.empresaId)!==fE)return false;
     if(fS&&a.estado!==fS)return false;
@@ -648,12 +655,12 @@ function renderActivos(){
 }
 
 function renderBodega(){
-  const list=cache.activos.filter(a=>a.estado==='activo'&&!asigActual(a.id)&&(!globalEmp||String(a.empresaId)===globalEmp));
+  const list=cache.activos.filter(a=>a.estado==='activo'&&!asigActual(a.id)&&(!globalEmp||!a.empresaId||String(a.empresaId)===globalEmp));
   document.getElementById('tbBodega').innerHTML=list.length?list.map(a=>`<tr><td><span class="mono">${a.codigo}</span></td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${empN(a.empresaId)}</td><td>${badge(a.condicion)}</td><td>$${(a.costo||0).toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})" title="Asignar este activo a un empleado">Asignar →</button></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏪</div>Bodega vacía</div></td></tr>';
 }
 function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})" title="Eliminar baja">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
 function renderEmpleados(){
-  const list=cache.empleados.filter(e=>!globalEmp||String(e.empresaId)===globalEmp);
+  const list=cache.empleados.filter(e=>!globalEmp||!e.empresaId||String(e.empresaId)===globalEmp);
   document.getElementById('tbEmp').innerHTML=list.map(e=>{const n=cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;return`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div><span style="font-weight:500">${e.nombre}</span></div></td><td>${e.cargo}</td><td>${areaN(e.areaId)}</td><td>${empN(e.empresaId)}</td><td>${n}</td><td>${badge(e.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="verExpediente(${e.id})" title="Ver historial completo de activos del empleado">Expediente</button><button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})" title="Eliminar empleado">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Sin empleados</div></td></tr>';
 }
 function renderAreas(){
@@ -663,7 +670,7 @@ function renderEmpresas(){
   document.getElementById('tbEmpresas').innerHTML=cache.empresas.map(e=>{const p=cache.activos.filter(a=>a.empresaId==e.id).length,u=cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;return`<tr><td><span style="font-weight:500">${e.nombre}</span></td><td><span class="mono">${e.ruc||'—'}</span></td><td>${e.contacto||'—'}</td><td>${p}</td><td>${u}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})" title="Eliminar empresa">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏢</div>Sin empresas</div></td></tr>';
 }
 function renderAsignaciones(){
-  const list=cache.asignaciones.filter(a=>!globalEmp||String(a.empresaUsoId)===globalEmp);
+  const list=cache.asignaciones.filter(a=>!globalEmp||!a.empresaUsoId||String(a.empresaUsoId)===globalEmp);
   document.getElementById('tbAsig').innerHTML=list.length?list.map(a=>`<tr><td>${actC(a.activoId)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${empNm(a.empleadoId).slice(0,2).toUpperCase()}</div>${empNm(a.empleadoId)}</div></td><td>${empN(a.empresaUsoId)}</td><td>${a.fecha}</td><td>${badge(a.condicionEntrega)}</td><td>${badge(a.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="printHojaById(${a.id})" title="Imprimir hoja de entrega">🖨️</button>${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})" title="Registrar devolución del activo">Devolver</button>`:''}<button class="btn btn-sm btn-danger" onclick="eliminarAsignacion(${a.id})" title="Eliminar asignación">🗑</button></div></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div>Sin asignaciones</div></td></tr>';
 }
 function renderHistorial(){
@@ -1038,7 +1045,7 @@ async function generarFicha() {
     mostrarEnlace(r.token);
     toast('Enlace generado correctamente');
   } else {
-    toast('Error al generar enlace', 'warning');
+    toast('Error: '+(r&&r.error?r.error:'Sin respuesta del servidor')+' — verifica que hayas iniciado sesión', 'warning');
   }
 }
 
@@ -1151,29 +1158,36 @@ let toastTimer;
 function toast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.style.background=type==='warning'?'var(--amber)':type==='danger'?'var(--red)':'#1e1e2e';t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
 
 (async()=>{
-  // 1. Try existing session cookie first
-  const r = await fetch('/api/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
-  if(r&&r.id){ currentUser=r; showApp(); return; }
+  // 1. Try session cookie (self-contained token set by server)
+  try {
+    const r=await fetch('/api/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+    if(r&&r.id){currentUser=r;showApp();return;}
+  } catch(e){}
 
-  // 2. Session lost (server restart) — try auto re-login from ap_cred cookie
-  const credCookie = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('ap_cred='));
-  if(credCookie){
-    try{
-      const decoded = atob(credCookie.split('=')[1]);
-      const sep = decoded.indexOf(':');
-      const usuario = decoded.slice(0, sep);
-      const password = decoded.slice(sep+1);
-      const r2 = await fetch('/api/login',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body:JSON.stringify({usuario,password})
-      }).then(r=>r.json()).catch(()=>null);
-      if(r2&&r2.ok){ currentUser=r2.user; showApp(); return; }
-    }catch(e){}
-  }
+  // 2. Session gone — re-login using ap_cred cookie saved at login time
+  // Server itself reads ap_cred, so just call /me again after ensuring cookie is sent
+  // OR do explicit re-login
+  try {
+    const all=document.cookie.split(';');
+    const credPart=all.map(x=>x.trim()).find(x=>x.startsWith('ap_cred='));
+    if(credPart){
+      const raw=credPart.substring('ap_cred='.length);
+      const decoded=decodeURIComponent(escape(atob(raw)));
+      const sep=decoded.indexOf(':');
+      if(sep>0){
+        const usuario=decoded.slice(0,sep);
+        const password=decoded.slice(sep+1);
+        const r2=await fetch('/api/login',{
+          method:'POST',credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({usuario,password})
+        }).then(r=>r.json()).catch(()=>null);
+        if(r2&&r2.ok){currentUser=r2.user;showApp();return;}
+      }
+    }
+  } catch(e){}
 
-  // 3. Nothing worked — show login screen
+  // 3. Show login
   showLogin();
 })();
 </script>
