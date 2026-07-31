@@ -979,26 +979,29 @@ function renderFichas() {
     : '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div>No hay fichas generadas aún</div></td></tr>';
 }
 
+// Track which mode is active: 'existente' or 'nuevo'
+let gfModoActivo = 'existente';
+
+function gfModo(modo) {
+  gfModoActivo = modo;
+  const esExistente = modo === 'existente';
+  document.getElementById('gfPanelExistente').style.display = esExistente ? '' : 'none';
+  document.getElementById('gfPanelNuevo').style.display = esExistente ? 'none' : '';
+  document.getElementById('gfBtnExistente').style.background = esExistente ? 'var(--blue)' : '#fff';
+  document.getElementById('gfBtnExistente').style.color = esExistente ? '#fff' : 'var(--text2)';
+  document.getElementById('gfBtnNuevo').style.background = esExistente ? '#fff' : 'var(--blue)';
+  document.getElementById('gfBtnNuevo').style.color = esExistente ? 'var(--text2)' : '#fff';
+}
+
 function openGenerarFicha() {
   ['gfNombre','gfCargo'].forEach(f => sv(f,''));
   sel('gfEmpresa', empOpts());
-  sel('gfEmpleadoExistente', cache.empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join(''), '— Seleccionar empleado —');
+  sel('gfEmpleadoExistente',
+    cache.empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join(''),
+    '— Seleccionar —');
   document.getElementById('gfInfoEmpleado').style.display = 'none';
-  switchGfTab('existente');
+  gfModo('existente');
   openModal('ovGenerarFicha');
-}
-
-function switchGfTab(tab) {
-  const esExistente = tab === 'existente';
-  document.getElementById('gfPanelExistente').style.display = esExistente ? '' : 'none';
-  document.getElementById('gfPanelNuevo').style.display = esExistente ? 'none' : '';
-  document.getElementById('gfTabExistente').className = esExistente ? 'btn btn-primary btn-sm' : 'btn btn-sm';
-  document.getElementById('gfTabExistente').style.flex = '1';
-  document.getElementById('gfTabExistente').style.justifyContent = 'center';
-  document.getElementById('gfTabNuevo').className = esExistente ? 'btn btn-sm' : 'btn btn-primary btn-sm';
-  document.getElementById('gfTabNuevo').style.flex = '1';
-  document.getElementById('gfTabNuevo').style.justifyContent = 'center';
-  document.getElementById('gfTabExistente').dataset.active = esExistente ? '1' : '0';
 }
 
 function onGfEmpleadoChange() {
@@ -1008,33 +1011,30 @@ function onGfEmpleadoChange() {
   const emp = cache.empleados.find(e => String(e.id) === empId);
   if (emp) {
     document.getElementById('gfInfoNombre').textContent = '👤 ' + emp.nombre;
-    document.getElementById('gfInfoCargo').textContent = emp.cargo;
-    document.getElementById('gfInfoEmpresa').textContent = empN(emp.empresaId);
+    document.getElementById('gfInfoDetalle').textContent = emp.cargo + ' · ' + empN(emp.empresaId);
     info.style.display = '';
   }
 }
 
 async function generarFicha() {
-  const esExistente = document.getElementById('gfTabExistente').dataset.active === '1';
   let nombre = '', cargo = '', empresaId = null, empresaNombre = '', empleadoId = null;
 
-  if (esExistente) {
+  if (gfModoActivo === 'existente') {
     const empId = v('gfEmpleadoExistente');
-    if (!empId) { toast('Selecciona un empleado', 'warning'); return; }
+    if (!empId) { toast('Selecciona un empleado de la lista', 'warning'); return; }
     const emp = cache.empleados.find(e => String(e.id) === empId);
-    if (emp) {
-      nombre = emp.nombre;
-      cargo = emp.cargo;
-      empresaId = emp.empresaId;
-      empresaNombre = empN(emp.empresaId);
-      empleadoId = emp.id;
-    }
+    if (!emp) { toast('Empleado no encontrado', 'warning'); return; }
+    nombre = emp.nombre;
+    cargo = emp.cargo;
+    empresaId = emp.empresaId || null;
+    empresaNombre = empN(emp.empresaId);
+    empleadoId = emp.id;
   } else {
     nombre = v('gfNombre');
     cargo = v('gfCargo');
     empresaId = v('gfEmpresa') || null;
-    const empresa = cache.empresas.find(e => String(e.id) === empresaId);
-    empresaNombre = empresa ? empresa.nombre : '';
+    const emp2 = cache.empresas.find(e => String(e.id) === String(empresaId));
+    empresaNombre = emp2 ? emp2.nombre : '';
   }
 
   const r = await POST('generar-ficha', { nombre, cargo, empresaId, empresaNombre, empleadoId });
@@ -1043,9 +1043,9 @@ async function generarFicha() {
     await loadAll();
     renderFichas();
     mostrarEnlace(r.token);
-    toast('Enlace generado correctamente');
+    toast('✅ Enlace generado correctamente');
   } else {
-    toast('Error: '+(r&&r.error?r.error:'Sin respuesta del servidor')+' — verifica que hayas iniciado sesión', 'warning');
+    toast('Error al generar: ' + (r && r.error ? r.error : 'intenta de nuevo'), 'warning');
   }
 }
 
@@ -1386,29 +1386,20 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Generar enlace de registro</span><button class="modal-close" onclick="closeModal('ovGenerarFicha')">×</button></div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px">El enlace se envía al empleado por WhatsApp o correo para que complete su ficha.</p>
-
-    <!-- Tipo: existente o nuevo -->
-    <div style="display:flex;gap:8px;margin-bottom:20px">
-      <button id="gfTabExistente" class="btn btn-primary btn-sm" style="flex:1;justify-content:center" onclick="switchGfTab('existente')">👤 Empleado existente</button>
-      <button id="gfTabNuevo" class="btn btn-sm" style="flex:1;justify-content:center" onclick="switchGfTab('nuevo')">➕ Empleado nuevo</button>
+    <div style="display:flex;gap:0;border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
+      <button id="gfBtnExistente" onclick="gfModo('existente')" style="flex:1;padding:9px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">👤 Empleado existente</button>
+      <button id="gfBtnNuevo" onclick="gfModo('nuevo')" style="flex:1;padding:9px;border:none;background:#fff;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">➕ Empleado nuevo</button>
     </div>
-
-    <!-- EXISTENTE -->
     <div id="gfPanelExistente">
       <div class="fgroup">
         <label>Seleccionar empleado *</label>
-        <select id="gfEmpleadoExistente" onchange="onGfEmpleadoChange()">
-          <option value="">— Seleccionar empleado —</option>
-        </select>
+        <select id="gfEmpleadoExistente" onchange="onGfEmpleadoChange()"><option value="">— Seleccionar —</option></select>
       </div>
       <div id="gfInfoEmpleado" style="display:none;background:var(--blue-bg);border-radius:var(--radius);padding:12px;font-size:13px;margin-bottom:12px">
         <div id="gfInfoNombre" style="font-weight:500"></div>
-        <div id="gfInfoCargo" style="color:var(--text2);margin-top:2px"></div>
-        <div id="gfInfoEmpresa" style="color:var(--text2)"></div>
+        <div id="gfInfoDetalle" style="color:var(--text2);margin-top:3px"></div>
       </div>
     </div>
-
-    <!-- NUEVO -->
     <div id="gfPanelNuevo" style="display:none">
       <div class="fgroup"><label>Nombre (opcional)</label><input id="gfNombre" placeholder="Ej: Juan Carlos Ramos"></div>
       <div class="form-row">
@@ -1416,7 +1407,6 @@ function toast(msg,type){const t=document.getElementById('toast');t.textContent=
         <div class="fgroup"><label>Empresa</label><select id="gfEmpresa"></select></div>
       </div>
     </div>
-
     <div class="form-actions">
       <button class="btn" onclick="closeModal('ovGenerarFicha')">Cancelar</button>
       <button class="btn btn-primary" onclick="generarFicha()">Generar enlace</button>
