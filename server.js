@@ -151,6 +151,7 @@ const server = http.createServer(async (req, res) => {
   const parsed   = url.parse(req.url, true);
   const pathname = parsed.pathname;
   const parts    = pathname.split('/').filter(Boolean);
+  console.log(`→ ${req.method} ${pathname} | cookies: ${(req.headers.cookie||'none').slice(0,80)}`);
 
   // ── Ficha pública: GET /ficha/:token ──────────────────────────────────────
   if (parts[0] === 'ficha' && parts[1] && req.method === 'GET') {
