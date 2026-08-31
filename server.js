@@ -225,6 +225,13 @@ const server = http.createServer(async (req, res) => {
       return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
     }
 
+    // Debug data counts (temporary)
+    if (parts[1] === 'debug-counts' && req.method === 'GET') {
+      const counts = {};
+      Object.keys(db).forEach(k => { counts[k] = Array.isArray(db[k]) ? db[k].length : (typeof db[k] === 'object' ? Object.keys(db[k]||{}).length : db[k]); });
+      return jsonRes(res, 200, { counts, equiposSample: (db.equipos||[]).slice(0,3), dataFile: DATA_FILE });
+    }
+
     // Debug session (temporary)
     if (parts[1] === 'debug-session' && req.method === 'GET') {
       const cookies = req.headers.cookie || 'NO COOKIES';
