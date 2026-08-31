@@ -720,16 +720,16 @@ function showApp(){
   // Show empresa in sidebar footer
   const empEl = document.getElementById('sidebarEmpresa');
   if(empEl) empEl.textContent = currentUser.empresaId ? '' : 'Todas las empresas';
-  loadAll();
   navigate('dashboard');
 }
 
 const TITLES={dashboard:'Dashboard',equipos:'💻 Equipos tecnológicos',licencias:'🔑 Licencias de software',asignaciones:'👤 Asignaciones',activos:'📦 Activos',bodega:'🏪 Bodega',bajas:'🗑️ Bajas',empleados:'👥 Empleados',areas:'🏬 Áreas',empresas:'🏢 Empresas',traslados:'⇄ Traslados',categorias:'◈ Categorías',historial:'📋 Historial',depreciacion:'📉 Depreciación',reportes:'🖨️ Reportes',usuarios:'⚙️ Usuarios'};
-function navigate(page){
+async function navigate(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.getElementById('pageTitle').textContent=TITLES[page]||page;
+  await loadAll();
   renderPage(page);
 }
 document.addEventListener('DOMContentLoaded',()=>{
