@@ -79,6 +79,17 @@ function initDB() {
 
 let db = loadDB();
 
+// Migración defensiva: si el archivo de datos es de una versión anterior
+// y le faltan colecciones nuevas (equipos, licencias, fichas, etc.),
+// se crean vacías aquí en vez de fallar. No borra nada existente.
+(function migrarDB() {
+  const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
+  let cambiado = false;
+  COLECCIONES.forEach(k => { if (!Array.isArray(db[k])) { db[k] = []; cambiado = true; } });
+  if (!db.sesiones || typeof db.sesiones !== 'object') { db.sesiones = {}; cambiado = true; }
+  if (cambiado) { saveDB(db); console.log('🔧 Base de datos actualizada: colecciones faltantes fueron creadas'); }
+})();
+
 function nextId(arr) { if(!arr||arr.length===0) return 1; return Math.max(...arr.map(x => x.id||0)) + 1; }
 function today() { return new Date().toISOString().split('T')[0]; }
 function jsonRes(res, status, data) {
@@ -128,6 +139,7 @@ function requireAuth(req, res) {
 }
 
 function crudHandler(tabla, req, res, parts) {
+  if (!Array.isArray(db[tabla])) db[tabla] = [];
   const id = parts[2] ? parseInt(parts[2]) : null;
   if (req.method === 'GET') {
     if (id) { const item = db[tabla].find(x => x.id === id); return item ? jsonRes(res, 200, item) : jsonRes(res, 404, { error: 'No encontrado' }); }
@@ -223,13 +235,6 @@ const server = http.createServer(async (req, res) => {
     // Health check
     if (parts[1] === 'health' && req.method === 'GET') {
       return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
-    }
-
-    // Debug data counts (temporary)
-    if (parts[1] === 'debug-counts' && req.method === 'GET') {
-      const counts = {};
-      Object.keys(db).forEach(k => { counts[k] = Array.isArray(db[k]) ? db[k].length : (typeof db[k] === 'object' ? Object.keys(db[k]||{}).length : db[k]); });
-      return jsonRes(res, 200, { counts, equiposSample: (db.equipos||[]).slice(0,3), dataFile: DATA_FILE });
     }
 
     // Debug session (temporary)
