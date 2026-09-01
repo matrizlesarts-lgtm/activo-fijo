@@ -73,6 +73,18 @@ function initDB() {
       { id: 6, tipo: 'asignacion', activoId: 3, empleadoId: 3, fecha: '2024-06-10', descripcion: 'Asignado a Roberto Fuentes', empresaId: 2 }
     ],
     usuarios: [{ id: 1, usuario: 'admin', password: 'admin123', nombre: 'Administrador', rol: 'admin', empresaId: '', estado: 'activo' }],
+    bancos: [
+      { id: 1, nombre: 'Banco Agrícola' },
+      { id: 2, nombre: 'Banco Cuscatlán' },
+      { id: 3, nombre: 'Banco Davivienda' },
+      { id: 4, nombre: 'BAC (Banco de América Central)' },
+      { id: 5, nombre: 'Banco Promerica' },
+      { id: 6, nombre: 'Banco Hipotecario' },
+      { id: 7, nombre: 'Banco de Fomento Agropecuario (BFA)' },
+      { id: 8, nombre: 'Banco Azul' },
+      { id: 9, nombre: 'Banco G&T Continental' },
+      { id: 10, nombre: 'Banco Industrial El Salvador' }
+    ],
     equipos: [], licencias: [], fichas: [], sesiones: {}
   };
 }
@@ -83,7 +95,7 @@ let db = loadDB();
 // y le faltan colecciones nuevas (equipos, licencias, fichas, etc.),
 // se crean vacías aquí en vez de fallar. No borra nada existente.
 (function migrarDB() {
-  const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
+  const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
   let cambiado = false;
   COLECCIONES.forEach(k => { if (!Array.isArray(db[k])) { db[k] = []; cambiado = true; } });
   if (!db.sesiones || typeof db.sesiones !== 'object') { db.sesiones = {}; cambiado = true; }
@@ -236,7 +248,7 @@ const server = http.createServer(async (req, res) => {
     if (parts[1] === 'diagnostico' && req.method === 'GET') {
       const s = requireAuth(req, res); if (!s) return;
       if (s.rol !== 'admin') return jsonRes(res, 403, { error: 'Solo administradores' });
-      const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
+      const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
       const detalle = COLECCIONES.map(k => ({
         coleccion: k,
         existe: Array.isArray(db[k]),
@@ -273,7 +285,7 @@ const server = http.createServer(async (req, res) => {
     if (!requireAuth(req, res)) return;
 
     // TABLAS CRUD
-    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
     if (TABLAS.includes(parts[1])) return crudHandler(parts[1], req, res, parts);
 
     // Generar ficha
