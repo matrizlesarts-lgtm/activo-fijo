@@ -486,6 +486,10 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
     <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
+    <div class="card" style="background:var(--bg2);padding:14px;margin:4px 0 14px;border:1px dashed var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">💳 Método de pago (para monitorear vencimiento de tarjeta)</div>
+      <div class="form-row"><div class="fgroup"><label>Banco</label><input id="licBanco" placeholder="Banco Agrícola, BAC..."></div><div class="fgroup"><label>Últimos 4 dígitos</label><input id="licTarjeta4" maxlength="4" placeholder="1234" inputmode="numeric"></div><div class="fgroup"><label>Vencimiento tarjeta</label><input id="licVencTarjeta" type="month" placeholder="MM/AAAA"></div></div>
+    </div>
     <div class="form-row"><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
     <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
     <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
@@ -888,6 +892,15 @@ function getLicEst(l){
   if(v2<=en30)return{st:'por vencer',cls:'amber'};
   return{st:'activa',cls:'green'};
 }
+function getTarjetaEst(l){
+  if(!l.vencTarjeta)return null;
+  const [y,m]=l.vencTarjeta.split('-').map(Number);
+  const vencFin=new Date(y,m,0);
+  const hoy=new Date(),en60=new Date();en60.setDate(en60.getDate()+60);
+  if(vencFin<hoy)return{st:'vencida',cls:'red',label:'⚠️ Tarjeta vencida'};
+  if(vencFin<=en60)return{st:'por vencer',cls:'amber',label:'⚠️ Tarjeta por vencer'};
+  return{st:'vigente',cls:'green',label:'Tarjeta vigente'};
+}
 function renderLicencias(){
   const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic');
   const CI={productividad:'📝',seguridad:'🛡️',diseno:'🎨',desarrollo:'💻',comunicacion:'💬',contabilidad:'📊',otro:'📦'};
@@ -902,6 +915,7 @@ function renderLicencias(){
   document.getElementById('licenciasGrid').innerHTML=list.length?list.map(l=>{
     const est=getLicEst(l);
     const dias=l.fechaVenc&&l.tipo!=='perpetua'?Math.ceil((new Date(l.fechaVenc)-new Date())/(1000*60*60*24)):null;
+    const tEst=getTarjetaEst(l);
     return `<div class="license-card">
       <div class="lc-header"><div><div class="lc-name">${CI[l.categoria]||'📦'} ${l.nombre}</div><div class="lc-vendor">${l.vendor||'Sin vendor'}</div></div>${badge(est.st,est.cls)}</div>
       <div class="lc-grid">
@@ -911,6 +925,10 @@ function renderLicencias(){
         <div><div class="lc-field">Empresa</div><div class="lc-val">${empN(l.empresaId)}</div></div>
       </div>
       ${l.fechaVenc&&l.tipo!=='perpetua'?`<div style="font-size:12px;margin-bottom:8px"><span style="color:var(--text3)">Vence: ${l.fechaVenc}</span> <span style="color:${est.cls==='red'?'var(--red)':est.cls==='amber'?'var(--amber)':'var(--green)'}">· ${dias!==null?(dias<0?'Vencida hace '+Math.abs(dias)+'d':dias+'d restantes'):'—'}</span></div>`:''}
+      ${(l.banco||l.tarjeta4||l.vencTarjeta)?`<div style="font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="color:var(--text3)">💳 ${l.banco||'Banco s/d'}${l.tarjeta4?' ····'+l.tarjeta4:''}${l.vencTarjeta?' · vence '+l.vencTarjeta:''}</span>
+        ${tEst&&tEst.st!=='vigente'?`<span style="color:${tEst.cls==='red'?'var(--red)':'var(--amber)'};font-weight:600">${tEst.label}</span>`:''}
+      </div>`:''}
       ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">👤 ${empNm(l.empleadoId)}</div>`:''}
       <div class="lc-actions">
         <button class="btn btn-sm" onclick="openLicencia(${l.id})">Editar</button>
@@ -1059,13 +1077,14 @@ function verDetalleEquipo(id){
 function openLicencia(id){
   editingId.lic=id||null;
   document.getElementById('mLicTitle').textContent=id?'Editar licencia':'Nueva licencia';
-  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto'].forEach(f=>sv(f,''));sv('licSeats',1);
-  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');}}
+  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta'].forEach(f=>sv(f,''));sv('licSeats',1);
+  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');}}
   openModal('ovLicencia');
 }
 async function saveLicencia(){
   const nombre=v('licNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
-  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas')};
+  const tarjeta4=v('licTarjeta4').replace(/\D/g,'').slice(0,4);
+  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta')};
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
   if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
