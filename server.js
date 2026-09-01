@@ -166,6 +166,99 @@ function requireAuth(req, res) {
   return s;
 }
 
+// ── Integración Google Drive (fotos de equipos) ──
+// Requiere 3 variables de entorno configuradas en Railway:
+//   GOOGLE_SERVICE_ACCOUNT_EMAIL  -> correo de la cuenta de servicio
+//   GOOGLE_SERVICE_ACCOUNT_KEY    -> llave privada (PEM) de la cuenta de servicio
+//   GOOGLE_DRIVE_FOLDER_ID        -> ID de la carpeta de Drive compartida con esa cuenta
+const crypto = require('crypto');
+let driveTokenCache = { token: null, exp: 0 };
+
+function base64url(buf) {
+  const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
+  return b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function getDriveAccessToken() {
+  const now = Math.floor(Date.now() / 1000);
+  if (driveTokenCache.token && driveTokenCache.exp > now + 60) return driveTokenCache.token;
+
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = (process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '').replace(/\\n/g, '\n');
+  if (!email || !key) throw new Error('Fotos en Drive no configuradas: faltan GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_SERVICE_ACCOUNT_KEY en el servidor');
+
+  const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const claim = base64url(JSON.stringify({
+    iss: email,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now
+  }));
+  const unsigned = header + '.' + claim;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(unsigned);
+  signer.end();
+  const signature = base64url(signer.sign(key));
+  const jwt = unsigned + '.' + signature;
+
+  const resp = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + jwt
+  });
+  const data = await resp.json();
+  if (!data.access_token) throw new Error('No se pudo autenticar con Google Drive: ' + JSON.stringify(data));
+  driveTokenCache = { token: data.access_token, exp: now + (data.expires_in || 3600) };
+  return data.access_token;
+}
+
+async function subirFotoADrive(dataUrl, nombreArchivo) {
+  const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+  if (!folderId) throw new Error('Fotos en Drive no configuradas: falta GOOGLE_DRIVE_FOLDER_ID en el servidor');
+  const m = /^data:(.+);base64,(.+)$/.exec(dataUrl || '');
+  if (!m) throw new Error('Formato de imagen inválido');
+  const mime = m[1];
+  const buffer = Buffer.from(m[2], 'base64');
+  const token = await getDriveAccessToken();
+
+  const boundary = 'assetpro_' + Date.now();
+  const metadata = JSON.stringify({ name: nombreArchivo, parents: [folderId] });
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n--${boundary}\r\nContent-Type: ${mime}\r\n\r\n`),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--`)
+  ]);
+
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body
+  });
+  const data = await resp.json();
+  if (!data.id) throw new Error('Error al subir la foto a Drive: ' + JSON.stringify(data));
+
+  // Hacer visible con el enlace (para poder mostrarla luego con <img>)
+  await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+
+  return { fileId: data.id, url: `https://drive.google.com/thumbnail?id=${data.id}&sz=w1000` };
+}
+
+async function eliminarFotoDeDrive(fileId) {
+  if (!fileId) return;
+  try {
+    const token = await getDriveAccessToken();
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  } catch (e) { console.error('No se pudo eliminar foto anterior de Drive:', e.message); }
+}
+
 function crudHandler(tabla, req, res, parts) {
   if (!Array.isArray(db[tabla])) db[tabla] = [];
   const id = parts[2] ? parseInt(parts[2]) : null;
@@ -299,6 +392,25 @@ const server = http.createServer(async (req, res) => {
 
     // Auth guard para el resto
     if (!requireAuth(req, res)) return;
+
+    // Subir foto de equipo a Google Drive
+    if (parts[1] === 'upload-foto' && req.method === 'POST') {
+      const body = await parseBody(req);
+      try {
+        const resultado = await subirFotoADrive(body.fotoBase64, body.filename || ('foto_' + Date.now() + '.jpg'));
+        if (body.oldFileId) eliminarFotoDeDrive(body.oldFileId); // no bloquea la respuesta
+        return jsonRes(res, 200, { ok: true, fileId: resultado.fileId, url: resultado.url });
+      } catch (e) {
+        return jsonRes(res, 500, { error: e.message });
+      }
+    }
+
+    // Eliminar foto de equipo en Drive (cuando se quita sin reemplazar)
+    if (parts[1] === 'delete-foto' && req.method === 'POST') {
+      const body = await parseBody(req);
+      eliminarFotoDeDrive(body.fileId);
+      return jsonRes(res, 200, { ok: true });
+    }
 
     // TABLAS CRUD
     const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
