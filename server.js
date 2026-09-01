@@ -99,6 +99,22 @@ let db = loadDB();
   let cambiado = false;
   COLECCIONES.forEach(k => { if (!Array.isArray(db[k])) { db[k] = []; cambiado = true; } });
   if (!db.sesiones || typeof db.sesiones !== 'object') { db.sesiones = {}; cambiado = true; }
+  // Si el catálogo de bancos se acaba de crear vacío, precargar bancos comunes
+  if (Array.isArray(db.bancos) && db.bancos.length === 0) {
+    db.bancos = [
+      { id: 1, nombre: 'Banco Agrícola' },
+      { id: 2, nombre: 'Banco Cuscatlán' },
+      { id: 3, nombre: 'Banco Davivienda' },
+      { id: 4, nombre: 'BAC (Banco de América Central)' },
+      { id: 5, nombre: 'Banco Promerica' },
+      { id: 6, nombre: 'Banco Hipotecario' },
+      { id: 7, nombre: 'Banco de Fomento Agropecuario (BFA)' },
+      { id: 8, nombre: 'Banco Azul' },
+      { id: 9, nombre: 'Banco G&T Continental' },
+      { id: 10, nombre: 'Banco Industrial El Salvador' }
+    ];
+    cambiado = true;
+  }
   if (cambiado) { saveDB(db); console.log('🔧 Base de datos actualizada: colecciones faltantes fueron creadas'); }
 })();
 
