@@ -876,6 +876,7 @@ function renderEquipos(){
     <td><div class="btn-group">
       <button class="btn btn-sm" onclick="verDetalleEquipo(${e.id})" title="Ver especificaciones completas del equipo">Ver</button>
       <button class="btn btn-sm" onclick="openEquipo(${e.id})">Editar</button>
+      <button class="btn btn-sm" onclick="duplicarEquipo(${e.id})" title="Crear un equipo nuevo copiando estos datos">⧉ Duplicar</button>
       <button class="btn btn-sm btn-danger" onclick="eliminarEquipo(${e.id})" title="Eliminar equipo">🗑</button>
     </div></td></tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="empty-icon">💻</div>Sin equipos registrados</div></td></tr>';
 }
@@ -913,6 +914,7 @@ function renderLicencias(){
       ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">👤 ${empNm(l.empleadoId)}</div>`:''}
       <div class="lc-actions">
         <button class="btn btn-sm" onclick="openLicencia(${l.id})">Editar</button>
+        <button class="btn btn-sm" onclick="duplicarLicencia(${l.id})" title="Crear una licencia nueva copiando estos datos">⧉ Duplicar</button>
         <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})" title="Eliminar licencia">🗑</button>
       </div>
     </div>`;}).join(''):'<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔑</div>Sin licencias registradas</div>';
@@ -1018,6 +1020,15 @@ async function saveEquipo(){
 }
 async function eliminarEquipo(id){if(!confirm('¿Eliminar este equipo permanentemente?'))return;await DEL('equipos/'+id);await loadAll();renderEquipos();toast('Equipo eliminado');}
 
+function duplicarEquipo(id){
+  openEquipo(id);
+  editingId.equipo=null;
+  document.getElementById('mEquipoTitle').textContent='Duplicar equipo (se creará uno nuevo)';
+  sv('eqCodigo', v('eqCodigo')?v('eqCodigo')+'-COPIA':'');
+  sv('eqSerie','');sv('eqMAC','');sv('eqHostname','');
+  toast('Revisa código, serie y datos únicos antes de guardar');
+}
+
 function verDetalleEquipo(id){
   const e=cache.equipos.find(x=>x.id==id);if(!e)return;
   document.getElementById('mDetalleTitle').textContent=e.codigo+' — '+e.descripcion;
@@ -1058,6 +1069,14 @@ async function saveLicencia(){
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
   if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
+}
+
+function duplicarLicencia(id){
+  openLicencia(id);
+  editingId.lic=null;
+  document.getElementById('mLicTitle').textContent='Duplicar licencia (se creará una nueva)';
+  sv('licClave','');
+  toast('Revisa la clave/licencia antes de guardar');
 }
 
 function openActivo(id){
