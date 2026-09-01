@@ -237,6 +237,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 
   <div id="sub-licencias" class="sub-page">
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button></div>
+    <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px"></div>
     <div class="search-row">
       <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
       <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
@@ -922,6 +923,25 @@ function getTarjetaEst(l){
 function renderLicencias(){
   const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic');
   const CI={productividad:'📝',seguridad:'🛡️',diseno:'🎨',desarrollo:'💻',comunicacion:'💬',contabilidad:'📊',otro:'📦'};
+
+  // Indicadores (sobre TODAS las licencias de la empresa activa, sin aplicar buscador/filtros de la tabla)
+  const baseSet=cache.licencias.filter(l=>!globalEmp||!l.empresaId||String(l.empresaId)===globalEmp);
+  const hoy=new Date();
+  const montoActivo=baseSet.filter(l=>getLicEst(l).st!=='vencida').reduce((sum,l)=>sum+(parseFloat(l.costo)||0),0);
+  const vencidas=baseSet.filter(l=>getLicEst(l).st==='vencida');
+  const alertaSemana=baseSet.filter(l=>{
+    if(!l.fechaVenc||l.tipo==='perpetua')return false;
+    const dias=Math.ceil((new Date(l.fechaVenc)-hoy)/(1000*60*60*24));
+    return dias>=0&&dias<=7;
+  });
+  const statsEl=document.getElementById('licStatsGrid');
+  if(statsEl){
+    statsEl.innerHTML=`
+      <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">💰</div><div><div class="stat-label">Monto activo en licencias</div><div class="stat-value">$${montoActivo.toFixed(2)}</div><div class="stat-sub">suma de licencias no vencidas</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg,#fee2e2)">⛔</div><div><div class="stat-label">Licencias vencidas</div><div class="stat-value">${vencidas.length}</div><div class="stat-sub">requieren renovación</div></div></div>
+      <div class="stat-card" style="${alertaSemana.length?'border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)':''}"><div class="stat-icon" style="background:var(--amber-bg)">🔔</div><div><div class="stat-label">Vencen esta semana</div><div class="stat-value">${alertaSemana.length}</div><div class="stat-sub">en los próximos 7 días</div></div></div>`;
+  }
+
   const list=cache.licencias.filter(l=>{
     if(globalEmp&&l.empresaId&&String(l.empresaId)!==globalEmp)return false;
     if(fT&&l.tipo!==fT)return false;
@@ -933,9 +953,11 @@ function renderLicencias(){
   document.getElementById('licenciasGrid').innerHTML=list.length?list.map(l=>{
     const est=getLicEst(l);
     const dias=l.fechaVenc&&l.tipo!=='perpetua'?Math.ceil((new Date(l.fechaVenc)-new Date())/(1000*60*60*24)):null;
+    const alertaUrgente=dias!==null&&dias>=0&&dias<=7;
     const tEst=getTarjetaEst(l);
-    return `<div class="license-card">
+    return `<div class="license-card"${alertaUrgente?' style="border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)"':''}>
       <div class="lc-header"><div><div class="lc-name">${CI[l.categoria]||'📦'} ${l.nombre}</div><div class="lc-vendor">${l.vendor||'Sin vendor'}</div></div>${badge(est.st,est.cls)}</div>
+      ${alertaUrgente?`<div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">🔔 Vence en ${dias===0?'hoy':dias+' día'+(dias===1?'':'s')} — renovar pronto</div>`:''}
       <div class="lc-grid">
         <div><div class="lc-field">Tipo</div><div class="lc-val">${l.tipo||'-'}</div></div>
         <div><div class="lc-field">Costo</div><div class="lc-val">${l.costo?'$'+parseFloat(l.costo).toFixed(2):'-'}</div></div>
