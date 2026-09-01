@@ -299,6 +299,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <button class="page-tab" onclick="switchPageTab(this,'sub-empleados')">👥 Empleados</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-areas')">🏬 Áreas</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-empresas')">🏢 Empresas</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-bancos')">🏦 Bancos</button>
     </div>
   </div>
 
@@ -327,6 +328,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="card">
       <div class="card-header"><span class="card-title">🏢 Empresas</span><button class="btn btn-primary btn-sm" onclick="openEmpresa()">+ Nueva</button></div>
       <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>RUC/NIT</th><th>Contacto</th><th>Activos propios</th><th>En uso</th><th>Acciones</th></tr></thead><tbody id="tbEmpresas"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-bancos" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🏦 Bancos</span><button class="btn btn-primary btn-sm" onclick="openBanco()">+ Nuevo</button></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Bancos disponibles para asociar a los métodos de pago de las licencias.</p>
+      <div class="table-wrap"><table><thead><tr><th>Banco</th><th>Licencias asociadas</th><th>Acciones</th></tr></thead><tbody id="tbBancos"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -488,7 +497,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
     <div class="card" style="background:var(--bg2);padding:14px;margin:4px 0 14px;border:1px dashed var(--border)">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">💳 Método de pago (para monitorear vencimiento de tarjeta)</div>
-      <div class="form-row"><div class="fgroup"><label>Banco</label><input id="licBanco" placeholder="Banco Agrícola, BAC..."></div><div class="fgroup"><label>Últimos 4 dígitos</label><input id="licTarjeta4" maxlength="4" placeholder="1234" inputmode="numeric"></div><div class="fgroup"><label>Vencimiento tarjeta</label><input id="licVencTarjeta" type="month" placeholder="MM/AAAA"></div></div>
+      <div class="form-row"><div class="fgroup"><label>Banco</label><select id="licBanco"><option value="">Sin especificar</option></select></div><div class="fgroup"><label>Últimos 4 dígitos</label><input id="licTarjeta4" maxlength="4" placeholder="1234" inputmode="numeric"></div><div class="fgroup"><label>Vencimiento tarjeta</label><input id="licVencTarjeta" type="month" placeholder="MM/AAAA"></div></div>
     </div>
     <div class="form-row"><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
     <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
@@ -565,6 +574,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <!-- Área -->
+<div class="overlay" id="ovBanco">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mBancoTitle">Nuevo banco</span><button class="modal-close" onclick="closeModal('ovBanco')">×</button></div>
+    <div class="fgroup"><label>Nombre del banco *</label><input id="bcNombre" placeholder="Banco Agrícola"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModal('ovBanco')">Cancelar</button><button class="btn btn-primary" onclick="saveBanco()">Guardar</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="ovArea">
   <div class="modal">
     <div class="modal-header"><span class="modal-title" id="mAreaTitle">Nueva área</span><button class="modal-close" onclick="closeModal('ovArea')">×</button></div>
@@ -698,7 +715,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="toast"></div>
 
 <script>
-let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[]};
+let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[]};
 let gfModoActivo='existente';
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;
 
@@ -773,7 +790,7 @@ function renderPage(p){
     dashboard: renderDashboard,
     tecnologia: ()=>{ renderEquipos(); renderLicencias(); renderAsignaciones(); },
     inventario: ()=>{ renderActivos(); renderBodega(); renderBajas(); },
-    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); },
+    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); },
     reportes:   ()=>{ renderHistorial(); renderTraslados(); renderDepr(); populateReportSelects(); },
     sistema:    ()=>{ renderUsuarios(); renderFichas(); }
   };
@@ -781,7 +798,7 @@ function renderPage(p){
 }
 
 async function loadAll(){
-  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias'];
+  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos'];
   const results=await Promise.all(keys.map(k=>GET(k)));
   keys.forEach((k,i)=>{if(results[i]&&Array.isArray(results[i]))cache[k]=results[i];});
   populateAllSelects();
@@ -807,6 +824,7 @@ const HCOL={alta:'#7c3aed',asignacion:'#16a34a',traslado:'#3b6ff0',devolucion:'#
 
 function sel(id,opts,empty){const el=document.getElementById(id);if(!el)return;const prev=el.value;el.innerHTML=(empty!==undefined?`<option value="">${empty}</option>`:'')+opts;if(prev)el.value=prev;}
 const empOpts=()=>cache.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+const bancoOpts=()=>cache.bancos.map(b=>`<option value="${b.nombre}">${b.nombre}</option>`).join('');
 const catOpts=()=>cache.categorias.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 const empNmOpts=()=>cache.empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join('');
 const areaOpts=()=>cache.areas.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
@@ -824,7 +842,7 @@ function populateAllSelects(){
   sel('arEmpresa',empOpts());sel('arResp',empNmOpts(),'Sin responsable');
   sel('asActivo',activoOpts());sel('asEmp',empNmOpts());sel('asEmpUso',empOpts());
   sel('baActivo',activoOpts());sel('uEmpresa',empOpts(),'Todas');
-  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
+  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('licBanco',bancoOpts(),'Sin especificar');sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
   populateReportSelects();
 }
 function populateReportSelects(){
@@ -977,6 +995,24 @@ function renderAreas(){
 }
 function renderEmpresas(){
   document.getElementById('tbEmpresas').innerHTML=cache.empresas.map(e=>{const p=cache.activos.filter(a=>a.empresaId==e.id).length,u=cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;return`<tr><td><span style="font-weight:500">${e.nombre}</span></td><td><span class="mono">${e.ruc||'—'}</span></td><td>${e.contacto||'—'}</td><td>${p}</td><td>${u}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})" title="Eliminar empresa">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏢</div>Sin empresas</div></td></tr>';
+}
+function renderBancos(){
+  const el=document.getElementById('tbBancos'); if(!el) return;
+  el.innerHTML=cache.bancos.map(b=>{const n=cache.licencias.filter(l=>l.banco===b.nombre).length;return`<tr><td><span style="font-weight:500">🏦 ${b.nombre}</span></td><td>${n}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openBanco(${b.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('bancos',${b.id})" title="Eliminar banco">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="3"><div class="empty"><div class="empty-icon">🏦</div>Sin bancos registrados</div></td></tr>';
+}
+function openBanco(id){
+  editingId.banco=id||null;
+  document.getElementById('mBancoTitle').textContent=id?'Editar banco':'Nuevo banco';
+  sv('bcNombre','');
+  if(id){const b=cache.bancos.find(x=>x.id==id);if(b)sv('bcNombre',b.nombre);}
+  openModal('ovBanco');
+}
+async function saveBanco(){
+  const nombre=v('bcNombre').trim();if(!nombre){toast('El nombre del banco es requerido','warning');return;}
+  const data={nombre};
+  const r=editingId.banco?await PUT('bancos/'+editingId.banco,data):await POST('bancos',data);
+  if(r&&!r.error){closeModal('ovBanco');await loadAll();renderBancos();populateAllSelects();toast('Banco guardado');}
+  else toast('Error al guardar','warning');
 }
 function renderAsignaciones(){
   const list=cache.asignaciones.filter(a=>!globalEmp||!a.empresaUsoId||String(a.empresaUsoId)===globalEmp);
@@ -1170,7 +1206,7 @@ async function saveUser(){
   const data={usuario,nombre:v('uNombre'),rol:v('uRol'),empresaId:v('uEmpresa')||'',estado:v('uEstado')};if(pass)data.password=pass;
   try{const r=editingId.user?await PUT('usuarios/'+editingId.user,data):await POST('usuarios',{...data,password:pass});if(r&&!r.error){closeModal('ovUser');await loadAll();renderUsuarios();toast('Usuario guardado');}else toast('Error: '+(r&&r.error?r.error:'intente de nuevo'),'warning');}catch(e){toast('Error de conexión','warning');}
 }
-async function delRecord(tabla,id){if(!confirm('¿Eliminar este registro?'))return;await DEL(tabla+'/'+id);await loadAll();toast('Registro eliminado');const m={categorias:'categorias',traslados:'traslados',bajas:'bajas',empleados:'empleados',areas:'areas',empresas:'empresas',usuarios:'usuarios',licencias:'licencias',historial:'historial'};if(m[tabla])renderPage(m[tabla]);}
+async function delRecord(tabla,id){if(!confirm('¿Eliminar este registro?'))return;await DEL(tabla+'/'+id);await loadAll();toast('Registro eliminado');const m={categorias:'catalogos',traslados:'reportes',bajas:'inventario',empleados:'catalogos',areas:'catalogos',empresas:'catalogos',bancos:'catalogos',usuarios:'sistema',licencias:'tecnologia',historial:'reportes'};if(m[tabla])renderPage(m[tabla]);}
 async function eliminarActivo(id){if(!confirm('¿Eliminar este activo permanentemente?'))return;await DEL('activos/'+id);const aids=cache.asignaciones.filter(a=>a.activoId==id).map(a=>a.id);for(const aid of aids)await DEL('asignaciones/'+aid);await loadAll();renderActivos();toast('Activo eliminado');}
 async function eliminarAsignacion(id){if(!confirm('¿Eliminar este registro?'))return;await DEL('asignaciones/'+id);await loadAll();renderAsignaciones();toast('Asignación eliminada');}
 
