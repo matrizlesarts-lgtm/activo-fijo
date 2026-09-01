@@ -396,6 +396,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="page-tabs">
       <button class="page-tab active" onclick="switchPageTab(this,'sub-usuarios')">⚙️ Usuarios</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-fichas')">📋 Fichas de registro</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-diagnostico');cargarDiagnostico()">🩺 Diagnóstico</button>
     </div>
   </div>
   <div id="sub-usuarios" class="sub-page active">
@@ -416,6 +417,21 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <table><thead><tr><th>Nombre pre-asignado</th><th>Cargo</th><th>Empresa</th><th>Estado</th><th>Fecha creación</th><th>Fecha envío</th><th>Acciones</th></tr></thead>
         <tbody id="tbFichas"></tbody></table>
       </div>
+    </div>
+  </div>
+
+  <div id="sub-diagnostico" class="sub-page">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🩺 Diagnóstico de datos del sistema</span>
+        <button class="btn btn-primary btn-sm" onclick="cargarDiagnostico()">↻ Revisar ahora</button>
+      </div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Revisa cuántos registros hay guardados realmente en cada módulo del sistema. Útil para confirmar que la información se está guardando correctamente.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Módulo</th><th>¿Existe?</th><th>Cantidad de registros</th></tr></thead>
+        <tbody id="tbDiagnostico"><tr><td colspan="3" style="text-align:center;color:var(--text2)">Presiona "Revisar ahora" para consultar</td></tr></tbody></table>
+      </div>
+      <p id="diagFecha" style="font-size:12px;color:var(--text2);margin-top:10px"></p>
     </div>
   </div>
 </div>
@@ -690,6 +706,18 @@ async function api(method,path,body){
   return r.json().catch(()=>({}));
 }
 const GET=p=>api('GET',p);const POST=(p,b)=>api('POST',p,b);const PUT=(p,b)=>api('PUT',p,b);const DEL=p=>api('DELETE',p);
+async function cargarDiagnostico(){
+  const tb=document.getElementById('tbDiagnostico');
+  tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text2)">Consultando...</td></tr>';
+  const r=await GET('diagnostico');
+  if(!r||!r.colecciones){ tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:#e11">No se pudo consultar (revisa tu conexión o sesión)</td></tr>'; return; }
+  tb.innerHTML=r.colecciones.map(c=>`<tr>
+    <td>${c.coleccion}</td>
+    <td>${c.existe?'✅ Sí':'❌ No creada'}</td>
+    <td style="font-weight:600">${c.cantidad}</td>
+  </tr>`).join('');
+  document.getElementById('diagFecha').textContent='Última revisión: '+new Date(r.verificadoEn).toLocaleString('es-SV');
+}
 
 async function doLogin(){
   const usuario=document.getElementById('loginUser').value.trim();
