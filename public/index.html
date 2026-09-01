@@ -457,6 +457,15 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="modal-header"><span class="modal-title" id="mEquipoTitle">Nuevo equipo</span><button class="modal-close" onclick="closeModal('ovEquipo')">×</button></div>
     <div class="tabs"><button class="tab-btn active" onclick="switchTab(this,'teG')">General</button><button class="tab-btn" onclick="switchTab(this,'teE')">Especificaciones</button><button class="tab-btn" onclick="switchTab(this,'teC')">Compra</button></div>
     <div id="teG" class="tab-pane active">
+      <div class="fgroup" style="display:flex;gap:16px;align-items:flex-start;margin-bottom:16px">
+        <div id="eqFotoPreview" style="width:100px;height:100px;border-radius:var(--radius);background:var(--bg2,#f3f4f6);display:flex;align-items:center;justify-content:center;overflow:hidden;border:1.5px solid var(--border);flex-shrink:0"><span style="color:var(--text3);font-size:11px;text-align:center;padding:4px">Sin foto</span></div>
+        <div style="flex:1">
+          <label>Foto del equipo</label>
+          <input type="file" id="eqFotoInput" accept="image/*" onchange="onEqFotoSelected(event)">
+          <div id="eqFotoStatus" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+          <button type="button" class="btn btn-sm" style="margin-top:6px;display:none" id="btnQuitarFoto" onclick="quitarEqFoto()">Quitar foto</button>
+        </div>
+      </div>
       <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"><option value="laptop">💻 Laptop</option><option value="desktop">🖥️ Desktop</option><option value="monitor">🖥 Monitor</option><option value="impresora">🖨️ Impresora</option><option value="telefono">📱 Teléfono</option><option value="tablet">📟 Tablet</option><option value="servidor">🗄️ Servidor</option><option value="red">🌐 Red</option><option value="camara">📷 Cámara</option><option value="otro">📦 Otro</option></select></div></div>
       <div class="fgroup"><label>Descripción *</label><input id="eqDesc" placeholder="Ej: Laptop Dell Latitude 5520"></div>
       <div class="form-row"><div class="fgroup"><label>Marca</label><input id="eqMarca"></div><div class="fgroup"><label>Modelo</label><input id="eqModelo"></div></div>
@@ -1079,17 +1088,55 @@ function addEqAcc(){const val=v('newEqAcc').trim();if(val){eqAccs.push(val);sv('
 function removeEqAcc(i){eqAccs.splice(i,1);renderEqAccs();}
 function renderEqAccs(){document.getElementById('eqAccList').innerHTML=eqAccs.map((a,i)=>`<span class="tag">${a} <span style="cursor:pointer" onclick="removeEqAcc(${i})">×</span></span>`).join('');}
 
+let eqFotoBase64Nueva=null,eqFotoDriveIdActual='',eqFotoEliminar=false;
+function onEqFotoSelected(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  if(file.size>8*1024*1024){toast('La imagen es muy grande (máx 8MB)','warning');ev.target.value='';return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    eqFotoBase64Nueva=reader.result;
+    eqFotoEliminar=false;
+    document.getElementById('eqFotoPreview').innerHTML=`<img src="${reader.result}" style="width:100%;height:100%;object-fit:cover">`;
+    document.getElementById('eqFotoStatus').textContent='Nueva foto lista — se subirá a Drive al guardar';
+    document.getElementById('btnQuitarFoto').style.display='inline-block';
+  };
+  reader.readAsDataURL(file);
+}
+function quitarEqFoto(){
+  eqFotoBase64Nueva=null;eqFotoEliminar=true;
+  document.getElementById('eqFotoPreview').innerHTML='<span style="color:var(--text3);font-size:11px;text-align:center;padding:4px">Sin foto</span>';
+  document.getElementById('eqFotoStatus').textContent='';
+  document.getElementById('eqFotoInput').value='';
+  document.getElementById('btnQuitarFoto').style.display='none';
+}
 function openEquipo(id){
   editingId.equipo=id||null;eqAccs=[];
+  eqFotoBase64Nueva=null;eqFotoDriveIdActual='';eqFotoEliminar=false;
+  document.getElementById('eqFotoInput').value='';
+  document.getElementById('eqFotoStatus').textContent='';
+  document.getElementById('btnQuitarFoto').style.display='none';
+  document.getElementById('eqFotoPreview').innerHTML='<span style="color:var(--text3);font-size:11px;text-align:center;padding:4px">Sin foto</span>';
   document.getElementById('mEquipoTitle').textContent=id?'Editar equipo':'Nuevo equipo';
   ['eqCodigo','eqDesc','eqMarca','eqModelo','eqSerie','eqColor','eqObs','eqCPU','eqRAM','eqStorage','eqSO','eqPantalla','eqGPU','eqMAC','eqHostname','eqEspec','eqFechaCompra','eqProveedor','eqFactura','eqCosto','eqGarantia','eqVencGarantia','eqVidaUtil'].forEach(f=>sv(f,''));
-  if(id){const e=cache.equipos.find(x=>x.id==id);if(e){sv('eqCodigo',e.codigo);sv('eqTipo',e.tipo||'laptop');sv('eqDesc',e.descripcion);sv('eqMarca',e.marca||'');sv('eqModelo',e.modelo||'');sv('eqSerie',e.serie||'');sv('eqColor',e.color||'');sv('eqEmpresa',e.empresaId);sv('eqArea',e.areaId||'');sv('eqEmpleado',e.empleadoId||'');sv('eqEstado',e.estado||'disponible');sv('eqCondicion',e.condicion||'bueno');sv('eqObs',e.observaciones||'');sv('eqCPU',e.cpu||'');sv('eqRAM',e.ram||'');sv('eqStorage',e.storage||'');sv('eqSO',e.so||'');sv('eqPantalla',e.pantalla||'');sv('eqGPU',e.gpu||'');sv('eqMAC',e.mac||'');sv('eqHostname',e.hostname||'');sv('eqEspec',e.especificaciones||'');sv('eqFechaCompra',e.fechaCompra||'');sv('eqProveedor',e.proveedor||'');sv('eqFactura',e.factura||'');sv('eqCosto',e.costo||'');sv('eqGarantia',e.garantia||'');sv('eqVencGarantia',e.vencGarantia||'');sv('eqVidaUtil',e.vidaUtil||'');eqAccs=[...(e.accesorios||[])];}}
+  if(id){const e=cache.equipos.find(x=>x.id==id);if(e){sv('eqCodigo',e.codigo);sv('eqTipo',e.tipo||'laptop');sv('eqDesc',e.descripcion);sv('eqMarca',e.marca||'');sv('eqModelo',e.modelo||'');sv('eqSerie',e.serie||'');sv('eqColor',e.color||'');sv('eqEmpresa',e.empresaId);sv('eqArea',e.areaId||'');sv('eqEmpleado',e.empleadoId||'');sv('eqEstado',e.estado||'disponible');sv('eqCondicion',e.condicion||'bueno');sv('eqObs',e.observaciones||'');sv('eqCPU',e.cpu||'');sv('eqRAM',e.ram||'');sv('eqStorage',e.storage||'');sv('eqSO',e.so||'');sv('eqPantalla',e.pantalla||'');sv('eqGPU',e.gpu||'');sv('eqMAC',e.mac||'');sv('eqHostname',e.hostname||'');sv('eqEspec',e.especificaciones||'');sv('eqFechaCompra',e.fechaCompra||'');sv('eqProveedor',e.proveedor||'');sv('eqFactura',e.factura||'');sv('eqCosto',e.costo||'');sv('eqGarantia',e.garantia||'');sv('eqVencGarantia',e.vencGarantia||'');sv('eqVidaUtil',e.vidaUtil||'');eqAccs=[...(e.accesorios||[])];
+    if(e.fotoUrl){eqFotoDriveIdActual=e.fotoDriveId||'';document.getElementById('eqFotoPreview').innerHTML=`<img src="${e.fotoUrl}" style="width:100%;height:100%;object-fit:cover">`;document.getElementById('btnQuitarFoto').style.display='inline-block';}
+  }}
   renderEqAccs();resetTabs('ovEquipo');openModal('ovEquipo');
 }
 async function saveEquipo(){
   const codigo=v('eqCodigo').trim(),descripcion=v('eqDesc').trim();
   if(!codigo||!descripcion){toast('Código y descripción son requeridos','warning');return;}
   const data={codigo,descripcion,tipo:v('eqTipo'),marca:v('eqMarca'),modelo:v('eqModelo'),serie:v('eqSerie'),color:v('eqColor'),empresaId:parseInt(v('eqEmpresa'))||0,areaId:v('eqArea')||null,empleadoId:v('eqEmpleado')||null,estado:v('eqEstado'),condicion:v('eqCondicion'),observaciones:v('eqObs'),cpu:v('eqCPU'),ram:v('eqRAM'),storage:v('eqStorage'),so:v('eqSO'),pantalla:v('eqPantalla'),gpu:v('eqGPU'),mac:v('eqMAC'),hostname:v('eqHostname'),especificaciones:v('eqEspec'),accesorios:[...eqAccs],fechaCompra:v('eqFechaCompra'),proveedor:v('eqProveedor'),factura:v('eqFactura'),costo:parseFloat(v('eqCosto'))||0,garantia:parseInt(v('eqGarantia'))||0,vencGarantia:v('eqVencGarantia'),vidaUtil:parseInt(v('eqVidaUtil'))||0};
+  if(eqFotoBase64Nueva){
+    toast('Subiendo foto a Drive...','success');
+    const up=await POST('upload-foto',{fotoBase64:eqFotoBase64Nueva,filename:(codigo||'equipo')+'_'+Date.now()+'.jpg',oldFileId:eqFotoDriveIdActual||null});
+    if(up&&up.ok){data.fotoUrl=up.url;data.fotoDriveId=up.fileId;}
+    else{toast('No se pudo subir la foto: '+(up&&up.error?up.error:'intenta de nuevo'),'warning');return;}
+  }else if(eqFotoEliminar){
+    if(eqFotoDriveIdActual)POST('delete-foto',{fileId:eqFotoDriveIdActual});
+    data.fotoUrl='';data.fotoDriveId='';
+  }
   const r=editingId.equipo?await PUT('equipos/'+editingId.equipo,data):await POST('equipos',data);
   if(r&&!r.error){closeModal('ovEquipo');await loadAll();renderEquipos();toast('Equipo guardado');}
   else toast('Error al guardar','warning');
@@ -1108,7 +1155,7 @@ function duplicarEquipo(id){
 function verDetalleEquipo(id){
   const e=cache.equipos.find(x=>x.id==id);if(!e)return;
   document.getElementById('mDetalleTitle').textContent=e.codigo+' — '+e.descripcion;
-  document.getElementById('detalleContent').innerHTML=`<div class="grid2" style="margin-bottom:16px">
+  document.getElementById('detalleContent').innerHTML=`${e.fotoUrl?`<div style="margin-bottom:16px"><img src="${e.fotoUrl}" style="max-width:220px;max-height:220px;border-radius:var(--radius);border:1.5px solid var(--border);object-fit:cover"></div>`:''}<div class="grid2" style="margin-bottom:16px">
     <table style="font-size:13px"><tbody>
       <tr><td style="color:var(--text2);padding:5px 0;padding-right:16px">Tipo:</td><td style="font-weight:500">${e.tipo||'-'}</td></tr>
       <tr><td style="color:var(--text2);padding:5px 0">Marca/Modelo:</td><td>${(e.marca||'-')+' '+(e.modelo||'')}</td></tr>
