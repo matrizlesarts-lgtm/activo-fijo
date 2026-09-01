@@ -232,6 +232,23 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ id: user.id, nombre: user.nombre, rol: user.rol, empresaId: user.empresaId }));
     }
 
+    // Diagnostico del sistema (permanente, solo admin autenticado)
+    if (parts[1] === 'diagnostico' && req.method === 'GET') {
+      const s = requireAuth(req, res); if (!s) return;
+      if (s.rol !== 'admin') return jsonRes(res, 403, { error: 'Solo administradores' });
+      const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas'];
+      const detalle = COLECCIONES.map(k => ({
+        coleccion: k,
+        existe: Array.isArray(db[k]),
+        cantidad: Array.isArray(db[k]) ? db[k].length : 0
+      }));
+      return jsonRes(res, 200, {
+        verificadoEn: new Date().toISOString(),
+        archivoDatos: DATA_FILE,
+        colecciones: detalle
+      });
+    }
+
     // Health check
     if (parts[1] === 'health' && req.method === 'GET') {
       return jsonRes(res, 200, { status: 'ok', dataFile: DATA_FILE, exists: fs.existsSync(DATA_FILE) });
