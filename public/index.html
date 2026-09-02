@@ -252,6 +252,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
         <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
         <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
+        <select id="fPagoLic" onchange="renderLicencias()"><option value="">Pagada y no pagada</option><option value="si">✅ Pagadas</option><option value="no">❌ No pagadas</option></select>
       </div>
       <div class="licenses-grid" id="licenciasGrid"></div>
     </div>
@@ -267,6 +268,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <th class="sortable-th" onclick="sortLicPersonas('estado')">Estado <span id="sortIc-estado"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('empresa')">Empresa <span id="sortIc-empresa"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('costo')">Costo <span id="sortIc-costo"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('pago')">Pago <span id="sortIc-pago"></span></th>
       </tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
     </div>
   </div>
@@ -537,6 +539,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
     <div class="form-row"><div class="fgroup"><label>Correo registrado</label><input id="licCorreo" type="email" placeholder="usuario@empresa.com"></div><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Estado de pago</label><select id="licPagado"><option value="no">❌ No pagada</option><option value="si">✅ Pagada</option></select></div><div class="fgroup"><label>Fecha de pago</label><input id="licFechaPago" type="date"></div></div>
     <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
     <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
   </div>
@@ -957,7 +960,7 @@ function getTarjetaEst(l){
   return{st:'vigente',cls:'green',label:'Tarjeta vigente'};
 }
 function renderLicencias(){
-  const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic');
+  const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic'),fP=v('fPagoLic');
   const CI={productividad:'📝',seguridad:'🛡️',diseno:'🎨',desarrollo:'💻',comunicacion:'💬',contabilidad:'📊',otro:'📦'};
 
   // Indicadores (sobre TODAS las licencias de la empresa activa, sin aplicar buscador/filtros de la tabla)
@@ -984,6 +987,8 @@ function renderLicencias(){
     if(q&&!l.nombre.toLowerCase().includes(q)&&!(l.vendor||'').toLowerCase().includes(q))return false;
     const est=getLicEst(l).st;
     if(fE&&est!==fE)return false;
+    if(fP==='si'&&!l.pagado)return false;
+    if(fP==='no'&&l.pagado)return false;
     return true;
   });
   document.getElementById('licenciasGrid').innerHTML=list.length?list.map(l=>{
@@ -992,7 +997,7 @@ function renderLicencias(){
     const alertaUrgente=dias!==null&&dias>=0&&dias<=7;
     const tEst=getTarjetaEst(l);
     return `<div class="license-card"${alertaUrgente?' style="border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)"':''}>
-      <div class="lc-header"><div><div class="lc-name">${CI[l.categoria]||'📦'} ${l.nombre}</div><div class="lc-vendor">${l.vendor||'Sin vendor'}</div></div>${badge(est.st,est.cls)}</div>
+      <div class="lc-header"><div><div class="lc-name">${CI[l.categoria]||'📦'} ${l.nombre}</div><div class="lc-vendor">${l.vendor||'Sin vendor'}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">${badge(est.st,est.cls)}${l.pagado?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</div></div>
       ${alertaUrgente?`<div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">🔔 Vence en ${dias===0?'hoy':dias+' día'+(dias===1?'':'s')} — renovar pronto</div>`:''}
       <div class="lc-grid">
         <div><div class="lc-field">Tipo</div><div class="lc-val">${l.tipo||'-'}</div></div>
@@ -1007,8 +1012,10 @@ function renderLicencias(){
       </div>`:''}
       ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">👤 ${empNm(l.empleadoId)}</div>`:''}
       ${l.correo?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">✉️ ${l.correo}</div>`:''}
+      ${l.pagado&&l.fechaPago?`<div style="font-size:12px;color:var(--text3);margin-bottom:8px">💵 Pagada el ${l.fechaPago}</div>`:''}
       <div class="lc-actions">
         <button class="btn btn-sm" onclick="openLicencia(${l.id})">Editar</button>
+        <button class="btn btn-sm" onclick="togglePagoLicencia(${l.id})" title="Marcar como pagada o no pagada">${l.pagado?'❌ Marcar no pagada':'✅ Marcar pagada'}</button>
         <button class="btn btn-sm" onclick="duplicarLicencia(${l.id})" title="Crear una licencia nueva copiando estos datos">⧉ Duplicar</button>
         <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})" title="Eliminar licencia">🗑</button>
       </div>
@@ -1119,7 +1126,8 @@ function renderLicPorPersona(){
       fechaVenc:l.fechaVenc||'',
       estado:est.st,estCls:est.cls,
       empresa:empN(l.empresaId),
-      costo:parseFloat(l.costo)||0
+      costo:parseFloat(l.costo)||0,
+      pago:l.pagado?'pagada':'no pagada',pagoBool:!!l.pagado
     };
   });
   const{col,dir}=licPersSort;
@@ -1129,7 +1137,7 @@ function renderLicPorPersona(){
     av=(av||'').toString().toLowerCase();bv=(bv||'').toString().toLowerCase();
     return av.localeCompare(bv)*dir;
   });
-  ['persona','licencia','correo','tipo','fechaInicio','fechaVenc','estado','empresa','costo'].forEach(c=>{
+  ['persona','licencia','correo','tipo','fechaInicio','fechaVenc','estado','empresa','costo','pago'].forEach(c=>{
     const ic=document.getElementById('sortIc-'+c);
     if(ic)ic.textContent=col===c?(dir===1?'▲':'▼'):'';
   });
@@ -1143,7 +1151,8 @@ function renderLicPorPersona(){
     <td>${badge(r.estado,r.estCls)}</td>
     <td>${r.empresa}</td>
     <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
-  </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
+    <td>${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</td>
+  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
 }
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
@@ -1278,19 +1287,27 @@ function calcVencLicencia(){
 function openLicencia(id){
   editingId.lic=id||null;
   document.getElementById('mLicTitle').textContent=id?'Editar licencia':'Nueva licencia';
-  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta','licCorreo'].forEach(f=>sv(f,''));sv('licSeats',1);
-  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');sv('licCorreo',l.correo||'');}}
+  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta','licCorreo','licFechaPago'].forEach(f=>sv(f,''));sv('licSeats',1);sv('licPagado','no');
+  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');sv('licCorreo',l.correo||'');sv('licPagado',l.pagado?'si':'no');sv('licFechaPago',l.fechaPago||'');}}
   openModal('ovLicencia');
 }
 async function saveLicencia(){
   const nombre=v('licNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
   const tarjeta4=v('licTarjeta4').replace(/\D/g,'').slice(0,4);
-  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim()};
+  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim(),pagado:v('licPagado')==='si',fechaPago:v('licFechaPago')};
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
   if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
 }
 
+async function togglePagoLicencia(id){
+  const l=cache.licencias.find(x=>x.id==id);if(!l)return;
+  const nuevoPagado=!l.pagado;
+  const data={pagado:nuevoPagado,fechaPago:nuevoPagado?(new Date().toISOString().slice(0,10)):''};
+  const r=await PUT('licencias/'+id,data);
+  if(r&&!r.error){await loadAll();renderLicencias();toast(nuevoPagado?'Marcada como pagada':'Marcada como no pagada');}
+  else toast('Error al actualizar','warning');
+}
 function duplicarLicencia(id){
   openLicencia(id);
   editingId.lic=null;
