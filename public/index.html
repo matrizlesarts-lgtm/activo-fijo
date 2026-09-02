@@ -258,8 +258,16 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
 
     <div id="licView-personas" class="lic-subview" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--text2)">
+        <span>Ordenar personas por:</span>
+        <select id="licGrupoOrden" onchange="renderLicPorPersona()">
+          <option value="nombre">Nombre (A-Z)</option>
+          <option value="montoDesc">Monto total (mayor a menor)</option>
+          <option value="montoAsc">Monto total (menor a mayor)</option>
+          <option value="cantidadDesc"># Licencias (mayor a menor)</option>
+        </select>
+      </div>
       <div class="table-wrap"><table><thead><tr>
-        <th class="sortable-th" onclick="sortLicPersonas('persona')">Persona <span id="sortIc-persona"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('licencia')">Licencia <span id="sortIc-licencia"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('correo')">Correo registrado <span id="sortIc-correo"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('tipo')">Tipo <span id="sortIc-tipo"></span></th>
@@ -1105,7 +1113,7 @@ function switchLicView(which){
   document.getElementById('licView-personas').style.display=which==='personas'?'block':'none';
   if(which==='personas')renderLicPorPersona();
 }
-let licPersSort={col:'persona',dir:1};
+let licPersSort={col:'licencia',dir:1};
 function sortLicPersonas(col){
   if(licPersSort.col===col)licPersSort.dir*=-1;else{licPersSort.col=col;licPersSort.dir=1;}
   renderLicPorPersona();
@@ -1118,7 +1126,9 @@ function renderLicPorPersona(){
     const emp=l.empleadoId?cache.empleados.find(x=>x.id==l.empleadoId):null;
     const est=getLicEst(l);
     return{
+      empleadoId:l.empleadoId||null,
       persona:emp?emp.nombre:'Sin asignar',
+      correoPersona:emp?(emp.correo||'-'):'-',
       licencia:l.nombre+(l.vendor?' ('+l.vendor+')':''),
       correo:l.correo||'',
       tipo:l.tipo||'',
@@ -1130,6 +1140,8 @@ function renderLicPorPersona(){
       pago:l.pagado?'pagada':'no pagada',pagoBool:!!l.pagado
     };
   });
+
+  // Orden de las columnas dentro de cada persona (clic en encabezado)
   const{col,dir}=licPersSort;
   rows.sort((a,b)=>{
     let av=a[col],bv=b[col];
@@ -1137,22 +1149,46 @@ function renderLicPorPersona(){
     av=(av||'').toString().toLowerCase();bv=(bv||'').toString().toLowerCase();
     return av.localeCompare(bv)*dir;
   });
-  ['persona','licencia','correo','tipo','fechaInicio','fechaVenc','estado','empresa','costo','pago'].forEach(c=>{
+  ['licencia','correo','tipo','fechaInicio','fechaVenc','estado','empresa','costo','pago'].forEach(c=>{
     const ic=document.getElementById('sortIc-'+c);
     if(ic)ic.textContent=col===c?(dir===1?'▲':'▼'):'';
   });
-  tbody.innerHTML=rows.length?rows.map(r=>`<tr>
-    <td>${r.persona}</td>
-    <td>${r.licencia}</td>
-    <td>${r.correo||'-'}</td>
-    <td>${r.tipo||'-'}</td>
-    <td>${r.fechaInicio||'-'}</td>
-    <td>${r.fechaVenc||(r.tipo==='perpetua'?'—':'-')}</td>
-    <td>${badge(r.estado,r.estCls)}</td>
-    <td>${r.empresa}</td>
-    <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
-    <td>${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</td>
-  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
+
+  // Agrupar por persona (para presupuestar: subtotal por persona)
+  const grupos={};
+  rows.forEach(r=>{
+    const key=r.empleadoId||'sin-asignar';
+    if(!grupos[key])grupos[key]={persona:r.persona,correoPersona:r.correoPersona,items:[],monto:0,pendiente:0};
+    grupos[key].items.push(r);
+    grupos[key].monto+=r.costo;
+    if(!r.pagoBool)grupos[key].pendiente+=r.costo;
+  });
+  let listaGrupos=Object.values(grupos);
+  const orden=v('licGrupoOrden')||'nombre';
+  if(orden==='nombre')listaGrupos.sort((a,b)=>a.persona==='Sin asignar'?1:b.persona==='Sin asignar'?-1:a.persona.localeCompare(b.persona));
+  else if(orden==='montoDesc')listaGrupos.sort((a,b)=>b.monto-a.monto);
+  else if(orden==='montoAsc')listaGrupos.sort((a,b)=>a.monto-b.monto);
+  else if(orden==='cantidadDesc')listaGrupos.sort((a,b)=>b.items.length-a.items.length);
+
+  if(!listaGrupos.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';return;}
+  let html='';
+  listaGrupos.forEach(g=>{
+    html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} licencia${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
+    g.items.forEach(r=>{
+      html+=`<tr>
+        <td>${r.licencia}</td>
+        <td>${r.correo||'-'}</td>
+        <td>${r.tipo||'-'}</td>
+        <td>${r.fechaInicio||'-'}</td>
+        <td>${r.fechaVenc||(r.tipo==='perpetua'?'—':'-')}</td>
+        <td>${badge(r.estado,r.estCls)}</td>
+        <td>${r.empresa}</td>
+        <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
+        <td>${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
 }
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
