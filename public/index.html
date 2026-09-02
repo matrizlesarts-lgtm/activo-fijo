@@ -515,10 +515,11 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   <div class="modal modal-lg">
     <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModal('ovLicencia')">×</button></div>
     <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
-    <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo" onchange="calcVencLicencia()"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
     <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
-    <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
+    <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date" oninput="calcVencLicencia()"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
+    <div id="licVencAuto" style="font-size:11px;color:var(--text3);margin:-10px 0 14px 2px"></div>
     <div class="card" style="background:var(--bg2);padding:14px;margin:4px 0 14px;border:1px dashed var(--border)">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">💳 Método de pago (para monitorear vencimiento de tarjeta)</div>
       <div class="form-row"><div class="fgroup"><label>Banco</label><select id="licBanco"><option value="">Sin especificar</option></select></div><div class="fgroup"><label>Últimos 4 dígitos</label><input id="licTarjeta4" maxlength="4" placeholder="1234" inputmode="numeric"></div><div class="fgroup"><label>Vencimiento tarjeta</label><input id="licVencTarjeta" type="month" placeholder="MM/AAAA"></div></div>
@@ -1243,6 +1244,19 @@ function verDetalleEquipo(id){
   openModal('ovDetalle');
 }
 
+function calcVencLicencia(){
+  const tipo=v('licTipo'),fi=v('licFechaInicio');
+  const hint=document.getElementById('licVencAuto');
+  if(!fi||tipo==='perpetua'){if(hint)hint.textContent='';return;}
+  const d=new Date(fi+'T00:00:00');
+  let venc;
+  if(tipo==='mensual')venc=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
+  else if(tipo==='anual')venc=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+  else{if(hint)hint.textContent='';return;}
+  const yyyy=venc.getFullYear(),mm=String(venc.getMonth()+1).padStart(2,'0'),dd=String(venc.getDate()).padStart(2,'0');
+  sv('licFechaVenc',`${yyyy}-${mm}-${dd}`);
+  if(hint)hint.textContent=(tipo==='mensual'?'📅 Calculada automáticamente: mismo día, próximo mes.':'📆 Calculada automáticamente: mismo día y mes, próximo año.')+' Puedes cambiarla manualmente si lo necesitas.';
+}
 function openLicencia(id){
   editingId.lic=id||null;
   document.getElementById('mLicTitle').textContent=id?'Editar licencia':'Nueva licencia';
