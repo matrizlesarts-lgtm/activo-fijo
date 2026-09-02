@@ -256,7 +256,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
 
     <div id="licView-personas" class="lic-subview" style="display:none">
-      <div class="table-wrap"><table><thead><tr><th>Persona asignada</th><th>Correo</th><th># Licencias</th><th>Monto total</th></tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Licencia</th><th>Correo registrado</th><th>Tipo</th><th>Fecha inicio</th><th>Fecha vencimiento</th><th>Estado</th><th>Empresa</th><th>Costo</th></tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
     </div>
   </div>
 
@@ -1093,17 +1093,38 @@ function renderLicPorPersona(){
   const porPersona={};
   baseSet.forEach(l=>{
     const key=l.empleadoId||'sin-asignar';
-    if(!porPersona[key])porPersona[key]={empleadoId:l.empleadoId,cantidad:0,monto:0};
-    porPersona[key].cantidad++;
+    if(!porPersona[key])porPersona[key]={empleadoId:l.empleadoId,licencias:[],monto:0};
+    porPersona[key].licencias.push(l);
     porPersona[key].monto+=parseFloat(l.costo)||0;
   });
-  const filas=Object.values(porPersona).sort((a,b)=>b.monto-a.monto);
-  tbody.innerHTML=filas.length?filas.map(p=>{
-    const emp=p.empleadoId?cache.empleados.find(x=>x.id==p.empleadoId):null;
+  const grupos=Object.values(porPersona).sort((a,b)=>{
+    const na=a.empleadoId?empNm(a.empleadoId):'zzz';
+    const nb=b.empleadoId?empNm(b.empleadoId):'zzz';
+    return na.localeCompare(nb);
+  });
+  if(!grupos.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';return;}
+  let html='';
+  grupos.forEach(g=>{
+    const emp=g.empleadoId?cache.empleados.find(x=>x.id==g.empleadoId):null;
     const nombre=emp?emp.nombre:'Sin asignar';
-    const correo=emp?(emp.correo||'-'):'-';
-    return `<tr><td>${nombre}</td><td>${correo}</td><td>${p.cantidad}</td><td>$${p.monto.toFixed(2)}</td></tr>`;
-  }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
+    const correoEmp=emp?(emp.correo||'-'):'-';
+    html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${nombre} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${correoEmp} · ${g.licencias.length} licencia${g.licencias.length===1?'':'s'} · $${g.monto.toFixed(2)} total</span></td></tr>`;
+    g.licencias.sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(l=>{
+      const est=getLicEst(l);
+      html+=`<tr>
+        <td></td>
+        <td>${l.nombre}${l.vendor?' <span style="color:var(--text3);font-size:12px">('+l.vendor+')</span>':''}</td>
+        <td>${l.correo||'-'}</td>
+        <td>${l.tipo||'-'}</td>
+        <td>${l.fechaInicio||'-'}</td>
+        <td>${l.fechaVenc||(l.tipo==='perpetua'?'—':'-')}</td>
+        <td>${badge(est.st,est.cls)}</td>
+        <td>${empN(l.empresaId)}</td>
+        <td>${l.costo?'$'+parseFloat(l.costo).toFixed(2):'-'}</td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
 }
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
