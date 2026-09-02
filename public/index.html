@@ -136,6 +136,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 .page-tab.active{color:var(--blue);border-bottom-color:var(--blue);background:#fff}
 .page-tab .tab-badge{background:var(--red);color:#fff;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:600}
 .sub-page{display:none}.sub-page.active{display:block}
+.lic-view-btn{background:var(--bg2);color:var(--text2)}.lic-view-btn.active{background:var(--blue);color:#fff}
 .page-tabs-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:20px;border:1px solid var(--border)}
 </style>
 </head>
@@ -236,14 +237,27 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   </div>
 
   <div id="sub-licencias" class="sub-page">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button></div>
-    <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px"></div>
-    <div class="search-row">
-      <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
-      <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
-      <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm lic-view-btn active" id="licViewBtnCards" onclick="switchLicView('cards')">🔑 Licencias</button>
+        <button class="btn btn-sm lic-view-btn" id="licViewBtnPersonas" onclick="switchLicView('personas')">👤 Por persona</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button>
     </div>
-    <div class="licenses-grid" id="licenciasGrid"></div>
+    <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px"></div>
+
+    <div id="licView-cards" class="lic-subview active">
+      <div class="search-row">
+        <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
+        <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
+        <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
+      </div>
+      <div class="licenses-grid" id="licenciasGrid"></div>
+    </div>
+
+    <div id="licView-personas" class="lic-subview" style="display:none">
+      <div class="table-wrap"><table><thead><tr><th>Persona asignada</th><th>Correo</th><th># Licencias</th><th>Monto total</th></tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
+    </div>
   </div>
 
   <div id="sub-asignaciones" class="sub-page">
@@ -509,7 +523,8 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">💳 Método de pago (para monitorear vencimiento de tarjeta)</div>
       <div class="form-row"><div class="fgroup"><label>Banco</label><select id="licBanco"><option value="">Sin especificar</option></select></div><div class="fgroup"><label>Últimos 4 dígitos</label><input id="licTarjeta4" maxlength="4" placeholder="1234" inputmode="numeric"></div><div class="fgroup"><label>Vencimiento tarjeta</label><input id="licVencTarjeta" type="month" placeholder="MM/AAAA"></div></div>
     </div>
-    <div class="form-row"><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Correo registrado</label><input id="licCorreo" type="email" placeholder="usuario@empresa.com"></div><div class="fgroup"><label>Asignada a</label><select id="licEmpleado"><option value="">Sin asignar</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Equipo asociado</label><select id="licEquipo"><option value="">Sin equipo</option></select></div></div>
     <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
     <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
   </div>
@@ -978,13 +993,15 @@ function renderLicencias(){
         <span style="color:var(--text3)">💳 ${l.banco||'Banco s/d'}${l.tarjeta4?' ····'+l.tarjeta4:''}${l.vencTarjeta?' · vence '+l.vencTarjeta:''}</span>
         ${tEst&&tEst.st!=='vigente'?`<span style="color:${tEst.cls==='red'?'var(--red)':'var(--amber)'};font-weight:600">${tEst.label}</span>`:''}
       </div>`:''}
-      ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">👤 ${empNm(l.empleadoId)}</div>`:''}
+      ${l.empleadoId?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">👤 ${empNm(l.empleadoId)}</div>`:''}
+      ${l.correo?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">✉️ ${l.correo}</div>`:''}
       <div class="lc-actions">
         <button class="btn btn-sm" onclick="openLicencia(${l.id})">Editar</button>
         <button class="btn btn-sm" onclick="duplicarLicencia(${l.id})" title="Crear una licencia nueva copiando estos datos">⧉ Duplicar</button>
         <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})" title="Eliminar licencia">🗑</button>
       </div>
     </div>`;}).join(''):'<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔑</div>Sin licencias registradas</div>';
+  renderLicPorPersona();
 }
 
 function renderActivos(){
@@ -1062,6 +1079,32 @@ function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+function switchLicView(which){
+  document.getElementById('licViewBtnCards').classList.toggle('active',which==='cards');
+  document.getElementById('licViewBtnPersonas').classList.toggle('active',which==='personas');
+  document.getElementById('licView-cards').style.display=which==='cards'?'block':'none';
+  document.getElementById('licView-personas').style.display=which==='personas'?'block':'none';
+  if(which==='personas')renderLicPorPersona();
+}
+function renderLicPorPersona(){
+  const tbody=document.getElementById('tbLicPorPersona');
+  if(!tbody)return;
+  const baseSet=cache.licencias.filter(l=>!globalEmp||!l.empresaId||String(l.empresaId)===globalEmp);
+  const porPersona={};
+  baseSet.forEach(l=>{
+    const key=l.empleadoId||'sin-asignar';
+    if(!porPersona[key])porPersona[key]={empleadoId:l.empleadoId,cantidad:0,monto:0};
+    porPersona[key].cantidad++;
+    porPersona[key].monto+=parseFloat(l.costo)||0;
+  });
+  const filas=Object.values(porPersona).sort((a,b)=>b.monto-a.monto);
+  tbody.innerHTML=filas.length?filas.map(p=>{
+    const emp=p.empleadoId?cache.empleados.find(x=>x.id==p.empleadoId):null;
+    const nombre=emp?emp.nombre:'Sin asignar';
+    const correo=emp?(emp.correo||'-'):'-';
+    return `<tr><td>${nombre}</td><td>${correo}</td><td>${p.cantidad}</td><td>$${p.monto.toFixed(2)}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
+}
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
   const page=btn.closest('.page');
@@ -1182,14 +1225,14 @@ function verDetalleEquipo(id){
 function openLicencia(id){
   editingId.lic=id||null;
   document.getElementById('mLicTitle').textContent=id?'Editar licencia':'Nueva licencia';
-  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta'].forEach(f=>sv(f,''));sv('licSeats',1);
-  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');}}
+  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta','licCorreo'].forEach(f=>sv(f,''));sv('licSeats',1);
+  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');sv('licCorreo',l.correo||'');}}
   openModal('ovLicencia');
 }
 async function saveLicencia(){
   const nombre=v('licNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
   const tarjeta4=v('licTarjeta4').replace(/\D/g,'').slice(0,4);
-  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta')};
+  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim()};
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
   if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
