@@ -137,6 +137,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 .page-tab .tab-badge{background:var(--red);color:#fff;font-size:10px;padding:1px 5px;border-radius:10px;font-weight:600}
 .sub-page{display:none}.sub-page.active{display:block}
 .lic-view-btn{background:var(--bg2);color:var(--text2)}.lic-view-btn.active{background:var(--blue);color:#fff}
+.sortable-th{cursor:pointer;user-select:none}.sortable-th:hover{color:var(--blue)}
 .page-tabs-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:20px;border:1px solid var(--border)}
 </style>
 </head>
@@ -256,7 +257,17 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
 
     <div id="licView-personas" class="lic-subview" style="display:none">
-      <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Licencia</th><th>Correo registrado</th><th>Tipo</th><th>Fecha inicio</th><th>Fecha vencimiento</th><th>Estado</th><th>Empresa</th><th>Costo</th></tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr>
+        <th class="sortable-th" onclick="sortLicPersonas('persona')">Persona <span id="sortIc-persona"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('licencia')">Licencia <span id="sortIc-licencia"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('correo')">Correo registrado <span id="sortIc-correo"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('tipo')">Tipo <span id="sortIc-tipo"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('fechaInicio')">Fecha inicio <span id="sortIc-fechaInicio"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('fechaVenc')">Fecha vencimiento <span id="sortIc-fechaVenc"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('estado')">Estado <span id="sortIc-estado"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('empresa')">Empresa <span id="sortIc-empresa"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('costo')">Costo <span id="sortIc-costo"></span></th>
+      </tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
     </div>
   </div>
 
@@ -1087,45 +1098,52 @@ function switchLicView(which){
   document.getElementById('licView-personas').style.display=which==='personas'?'block':'none';
   if(which==='personas')renderLicPorPersona();
 }
+let licPersSort={col:'persona',dir:1};
+function sortLicPersonas(col){
+  if(licPersSort.col===col)licPersSort.dir*=-1;else{licPersSort.col=col;licPersSort.dir=1;}
+  renderLicPorPersona();
+}
 function renderLicPorPersona(){
   const tbody=document.getElementById('tbLicPorPersona');
   if(!tbody)return;
   const baseSet=cache.licencias.filter(l=>!globalEmp||!l.empresaId||String(l.empresaId)===globalEmp);
-  const porPersona={};
-  baseSet.forEach(l=>{
-    const key=l.empleadoId||'sin-asignar';
-    if(!porPersona[key])porPersona[key]={empleadoId:l.empleadoId,licencias:[],monto:0};
-    porPersona[key].licencias.push(l);
-    porPersona[key].monto+=parseFloat(l.costo)||0;
+  let rows=baseSet.map(l=>{
+    const emp=l.empleadoId?cache.empleados.find(x=>x.id==l.empleadoId):null;
+    const est=getLicEst(l);
+    return{
+      persona:emp?emp.nombre:'Sin asignar',
+      licencia:l.nombre+(l.vendor?' ('+l.vendor+')':''),
+      correo:l.correo||'',
+      tipo:l.tipo||'',
+      fechaInicio:l.fechaInicio||'',
+      fechaVenc:l.fechaVenc||'',
+      estado:est.st,estCls:est.cls,
+      empresa:empN(l.empresaId),
+      costo:parseFloat(l.costo)||0
+    };
   });
-  const grupos=Object.values(porPersona).sort((a,b)=>{
-    const na=a.empleadoId?empNm(a.empleadoId):'zzz';
-    const nb=b.empleadoId?empNm(b.empleadoId):'zzz';
-    return na.localeCompare(nb);
+  const{col,dir}=licPersSort;
+  rows.sort((a,b)=>{
+    let av=a[col],bv=b[col];
+    if(col==='costo')return(av-bv)*dir;
+    av=(av||'').toString().toLowerCase();bv=(bv||'').toString().toLowerCase();
+    return av.localeCompare(bv)*dir;
   });
-  if(!grupos.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';return;}
-  let html='';
-  grupos.forEach(g=>{
-    const emp=g.empleadoId?cache.empleados.find(x=>x.id==g.empleadoId):null;
-    const nombre=emp?emp.nombre:'Sin asignar';
-    const correoEmp=emp?(emp.correo||'-'):'-';
-    html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${nombre} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${correoEmp} · ${g.licencias.length} licencia${g.licencias.length===1?'':'s'} · $${g.monto.toFixed(2)} total</span></td></tr>`;
-    g.licencias.sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(l=>{
-      const est=getLicEst(l);
-      html+=`<tr>
-        <td></td>
-        <td>${l.nombre}${l.vendor?' <span style="color:var(--text3);font-size:12px">('+l.vendor+')</span>':''}</td>
-        <td>${l.correo||'-'}</td>
-        <td>${l.tipo||'-'}</td>
-        <td>${l.fechaInicio||'-'}</td>
-        <td>${l.fechaVenc||(l.tipo==='perpetua'?'—':'-')}</td>
-        <td>${badge(est.st,est.cls)}</td>
-        <td>${empN(l.empresaId)}</td>
-        <td>${l.costo?'$'+parseFloat(l.costo).toFixed(2):'-'}</td>
-      </tr>`;
-    });
+  ['persona','licencia','correo','tipo','fechaInicio','fechaVenc','estado','empresa','costo'].forEach(c=>{
+    const ic=document.getElementById('sortIc-'+c);
+    if(ic)ic.textContent=col===c?(dir===1?'▲':'▼'):'';
   });
-  tbody.innerHTML=html;
+  tbody.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${r.persona}</td>
+    <td>${r.licencia}</td>
+    <td>${r.correo||'-'}</td>
+    <td>${r.tipo||'-'}</td>
+    <td>${r.fechaInicio||'-'}</td>
+    <td>${r.fechaVenc||(r.tipo==='perpetua'?'—':'-')}</td>
+    <td>${badge(r.estado,r.estCls)}</td>
+    <td>${r.empresa}</td>
+    <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
+  </tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin datos</td></tr>';
 }
 function switchPageTab(btn,paneId){
   const wrap=btn.closest('.page-tabs-wrap')||btn.closest('.page');
