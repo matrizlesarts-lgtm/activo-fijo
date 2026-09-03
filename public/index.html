@@ -285,6 +285,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <th class="sortable-th" onclick="sortLicPersonas('empresa')">Empresa <span id="sortIc-empresa"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('costo')">Costo <span id="sortIc-costo"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('pago')">Pago <span id="sortIc-pago"></span></th>
+        <th>Acciones</th>
       </tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
     </div>
   </div>
@@ -542,7 +543,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <!-- Licencia -->
 <div class="overlay" id="ovLicencia">
   <div class="modal modal-lg">
-    <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModal('ovLicencia')">×</button></div>
+    <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModalSafe('ovLicencia')">×</button></div>
     <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
     <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo" onchange="calcVencLicencia()"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
@@ -565,7 +566,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       </div>
     </div>
     <div class="fgroup"><label>Notas</label><textarea id="licNotas" placeholder="Instrucciones, contacto soporte..."></textarea></div>
-    <div class="form-actions"><button class="btn" onclick="closeModal('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
+    <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovLicencia')">Cancelar</button><button class="btn btn-primary" onclick="saveLicencia()">Guardar</button></div>
   </div>
 </div>
 
@@ -847,8 +848,14 @@ async function navigate(page){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
-  document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('open');}));
+  document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModalSafe(ov.id);}));
 });
+function closeModalSafe(id){
+  if(document.getElementById(id).classList.contains('dirty-guard')){
+    if(!confirm('¿Estás seguro que quieres salir? Los cambios que no hayas guardado se perderán.'))return;
+  }
+  document.getElementById(id).classList.remove('open');
+}
 function renderPage(p){
   const fn={
     dashboard: renderDashboard,
@@ -1151,6 +1158,26 @@ async function toggleVencPersonaPago(licId,idx){
   if(r&&!r.error){await loadAll();renderLicencias();toast(nuevoPagado?'Marcada como pagada':'Marcada como no pagada');}
   else toast('Error al actualizar','warning');
 }
+function calcVencimientosPasados(fecha,tipo){
+  // Devuelve las fechas de vencimiento que ya pasaron desde 'fecha' hasta hoy, segun periodicidad
+  if(!fecha||tipo==='perpetua')return[];
+  const resultado=[];
+  let d=new Date(fecha+'T00:00:00');
+  const hoy=new Date();
+  let guard=0;
+  while(d<hoy&&guard<240){
+    resultado.push(d.toISOString().slice(0,10));
+    if(tipo==='mensual')d=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
+    else if(tipo==='anual')d=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+    else break;
+    guard++;
+  }
+  return resultado;
+}
+function toggleVencHistorial(rowId){
+  const el=document.getElementById(rowId);
+  if(el)el.style.display=el.style.display==='none'?'table-row':'none';
+}
 function renderLicPorPersona(){
   const tbody=document.getElementById('tbLicPorPersona');
   if(!tbody)return;
@@ -1218,22 +1245,32 @@ function renderLicPorPersona(){
   else if(orden==='montoAsc')listaGrupos.sort((a,b)=>a.monto-b.monto);
   else if(orden==='cantidadDesc')listaGrupos.sort((a,b)=>b.items.length-a.items.length);
 
-  if(!listaGrupos.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3)">Sin fechas en el rango seleccionado</td></tr>';return;}
+  if(!listaGrupos.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin fechas en el rango seleccionado</td></tr>';return;}
   let html='';
   listaGrupos.forEach(g=>{
-    html+=`<tr style="background:var(--bg2)"><td colspan="8" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} fecha${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
-    g.items.forEach(r=>{
+    html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} fecha${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
+    g.items.forEach((r,ridx)=>{
       const pagoCell=r.vencIdx==='legacy'&&!r.fechaVenc?(r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')):`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${typeof r.vencIdx==='string'?"'"+r.vencIdx+"'":r.vencIdx})" title="Clic para cambiar">${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>`;
+      const rowId='vh_'+r.licId+'_'+ridx;
+      const pasados=r.estado==='vencida'?calcVencimientosPasados(r.fechaVenc,r.tipo):[];
+      const fechaCell=pasados.length?`${r.fechaVenc} <span style="cursor:pointer;color:var(--blue)" onclick="toggleVencHistorial('${rowId}')" title="Ver vencimientos pasados">▾ (${pasados.length})</span>`:(r.fechaVenc||(r.tipo==='perpetua'?'—':'-'));
       html+=`<tr>
         <td>${r.licencia}</td>
         <td>${r.correo||'-'}</td>
         <td>${r.tipo||'-'}</td>
-        <td>${r.fechaVenc||(r.tipo==='perpetua'?'—':'-')}</td>
+        <td>${fechaCell}</td>
         <td>${badge(r.estado,r.estCls)}</td>
         <td>${r.empresa}</td>
         <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
         <td>${pagoCell}</td>
+        <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.licId})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.licId})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.licId})" title="Eliminar">🗑</button></td>
       </tr>`;
+      if(pasados.length){
+        html+=`<tr id="${rowId}" style="display:none;background:var(--bg2)"><td colspan="9" style="font-size:12px;color:var(--text2);padding:10px 16px">
+          <strong>Vencimientos pasados de esta licencia (desde ${r.fechaVenc} hasta hoy):</strong><br>
+          ${pasados.map(f=>`<span class="tag" style="margin:2px">${f}</span>`).join(' ')}
+        </td></tr>`;
+      }
     });
   });
   tbody.innerHTML=html;
@@ -1378,12 +1415,24 @@ function openLicencia(id){
   }}
   renderLicVencList();
   openModal('ovLicencia');
+  document.getElementById('ovLicencia').classList.remove('dirty-guard');
+  setTimeout(armarDirtyGuardLicencia,0);
 }
+function armarDirtyGuardLicencia(){
+  const modal=document.getElementById('ovLicencia');
+  const marcar=()=>modal.classList.add('dirty-guard');
+  modal.querySelectorAll('input,select,textarea').forEach(el=>{
+    el.removeEventListener('input',marcar);el.removeEventListener('change',marcar);
+    el.addEventListener('input',marcar);el.addEventListener('change',marcar);
+  });
+}
+function marcarLicDirty(){const m=document.getElementById('ovLicencia');if(m)m.classList.add('dirty-guard');}
 function addLicVencActual(){
   const f=v('licFechaVenc');
   if(!f){toast('Primero define una fecha de vencimiento arriba','warning');return;}
   if(licVencs.some(x=>x.fecha===f)){toast('Esa fecha ya está en la lista','warning');return;}
   licVencs.push({fecha:f,pagado:false,fechaPago:''});
+  marcarLicDirty();
   renderLicVencList();
 }
 function addLicVencManual(){
@@ -1392,12 +1441,14 @@ function addLicVencManual(){
   if(licVencs.some(x=>x.fecha===f)){toast('Esa fecha ya está en la lista','warning');return;}
   licVencs.push({fecha:f,pagado:false,fechaPago:''});
   sv('licNuevaFechaVenc','');
+  marcarLicDirty();
   renderLicVencList();
 }
-function removeLicVenc(i){licVencs.splice(i,1);renderLicVencList();}
+function removeLicVenc(i){licVencs.splice(i,1);marcarLicDirty();renderLicVencList();}
 function toggleLicVencPagoModal(i){
   licVencs[i].pagado=!licVencs[i].pagado;
   licVencs[i].fechaPago=licVencs[i].pagado?new Date().toISOString().slice(0,10):'';
+  marcarLicDirty();
   renderLicVencList();
 }
 function renderLicVencList(){
