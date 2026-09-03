@@ -1116,7 +1116,7 @@ async function saveBanco(){
   const nombre=v('bcNombre').trim();if(!nombre){toast('El nombre del banco es requerido','warning');return;}
   const data={nombre};
   const r=editingId.banco?await PUT('bancos/'+editingId.banco,data):await POST('bancos',data);
-  if(r&&!r.error){closeModalSafe('ovBanco');await loadAll();renderBancos();populateAllSelects();toast('Banco guardado');}
+  if(r&&!r.error){closeModal('ovBanco');await loadAll();renderBancos();populateAllSelects();toast('Banco guardado');}
   else toast('Error al guardar','warning');
 }
 function renderAsignaciones(){
@@ -1353,7 +1353,7 @@ async function saveEquipo(){
     data.fotoUrl='';data.fotoDriveId='';
   }
   const r=editingId.equipo?await PUT('equipos/'+editingId.equipo,data):await POST('equipos',data);
-  if(r&&!r.error){closeModalSafe('ovEquipo');await loadAll();renderEquipos();toast('Equipo guardado');}
+  if(r&&!r.error){closeModal('ovEquipo');await loadAll();renderEquipos();toast('Equipo guardado');}
   else toast('Error al guardar','warning');
 }
 async function eliminarEquipo(id){if(!confirm('¿Eliminar este equipo permanentemente?'))return;await DEL('equipos/'+id);await loadAll();renderEquipos();toast('Equipo eliminado');}
@@ -1458,7 +1458,7 @@ async function saveLicencia(){
   const ultimoPago=vencimientos.filter(x=>x.pagado&&x.fechaPago).map(x=>x.fechaPago).sort().pop()||'';
   const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim(),vencimientos,pagado,fechaPago:ultimoPago};
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
-  if(r&&!r.error){closeModalSafe('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
+  if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
 }
 
@@ -1485,7 +1485,7 @@ async function saveActivo(){
   const data={codigo,descripcion,empresaId:parseInt(v('aEmpresa'))||0,categoriaId:parseInt(v('aCategoria'))||0,areaId:v('aArea')||null,marca:v('aMarca'),modelo:v('aModelo'),serie:v('aSerie'),color:v('aColor'),costo:parseFloat(v('aCosto'))||0,condicion:v('aCondicion'),notas:v('aNotas'),fechaCompra:v('aFechaCompra'),proveedor:v('aProveedor'),factura:v('aFactura'),montoFactura:parseFloat(v('aMontoFactura'))||0,garantia:parseInt(v('aGarantia'))||0,vencGarantia:v('aVencGarantia'),vidaUtil:parseInt(v('aVidaUtil'))||0,especificaciones:v('aEspec'),accesorios:[...accs],estado:'activo'};
   let r;if(editingId.activo){r=await PUT('activos/'+editingId.activo,data);if(r&&!r.error)await POST('historial',{tipo:'traslado',activoId:editingId.activo,empleadoId:null,fecha:today(),descripcion:'Activo actualizado',empresaId:data.empresaId});}
   else{r=await POST('activos',data);if(r&&!r.error)await POST('historial',{tipo:'alta',activoId:r.id,empleadoId:null,fecha:today(),descripcion:'Activo registrado',empresaId:data.empresaId});}
-  if(r&&!r.error){closeModalSafe('ovActivo');await loadAll();renderActivos();toast('Activo guardado');}
+  if(r&&!r.error){closeModal('ovActivo');await loadAll();renderActivos();toast('Activo guardado');}
   else toast('Error al guardar','warning');
 }
 
@@ -1521,7 +1521,7 @@ async function saveAsig(){
   if(!activoId||!empleadoId||!fecha){toast('Complete los campos requeridos','warning');return;}
   const data={activoId,empleadoId,empresaUsoId:parseInt(v('asEmpUso'))||0,fecha,condicionEntrega:v('asCondicion'),entregadoPor:v('asEntregadoPor'),observaciones:v('asObs'),estado:'activo'};
   const r=await POST('asignaciones',data);
-  if(r&&!r.error){await POST('historial',{tipo:'asignacion',activoId,empleadoId,fecha,descripcion:'Asignado a '+empNm(empleadoId)+' — Condición: '+data.condicionEntrega,empresaId:data.empresaUsoId});closeModalSafe('ovAsig');await loadAll();renderAsignaciones();toast('Asignación registrada');}
+  if(r&&!r.error){await POST('historial',{tipo:'asignacion',activoId,empleadoId,fecha,descripcion:'Asignado a '+empNm(empleadoId)+' — Condición: '+data.condicionEntrega,empresaId:data.empresaUsoId});closeModal('ovAsig');await loadAll();renderAsignaciones();toast('Asignación registrada');}
 }
 async function devolverActivo(asigId){const cond=prompt('Condición al recibir:','bueno');if(cond===null)return;const r=await POST('devolver',{asigId,condicion:cond});if(r&&r.ok){await loadAll();renderAsignaciones();toast('Activo devuelto');}}
 function openBaja(preId){sv('baFecha',today());['baMotivo','baAutorizado'].forEach(f=>sv(f,''));if(preId)setTimeout(()=>sv('baActivo',preId),50);openModal('ovBaja');}
@@ -1529,20 +1529,20 @@ async function saveBaja(){
   const activoId=parseInt(v('baActivo'))||0,fecha=v('baFecha');
   if(!activoId||!fecha){toast('Activo y fecha requeridos','warning');return;}
   const r=await POST('dar-baja',{activoId,fecha,tipo:v('baTipo'),motivo:v('baMotivo'),autorizado:v('baAutorizado'),reporte:''});
-  if(r&&r.ok){closeModalSafe('ovBaja');await loadAll();renderBajas();renderActivos();toast('Baja registrada');}
+  if(r&&r.ok){closeModal('ovBaja');await loadAll();renderBajas();renderActivos();toast('Baja registrada');}
 }
 function openEmpleado(id){editingId.emp=id||null;document.getElementById('mEmpTitle').textContent=id?'Editar empleado':'Nuevo empleado';['eNombre','eDUI','eCargo','eCorreo','eTel'].forEach(f=>sv(f,''));if(id){const e=cache.empleados.find(x=>x.id==id);if(e){sv('eNombre',e.nombre);sv('eDUI',e.dui||'');sv('eCargo',e.cargo);sv('eArea',e.areaId||'');sv('eEmpresa',e.empresaId);sv('eCorreo',e.correo||'');sv('eTel',e.telefono||'');sv('eEstado',e.estado);}}openModal('ovEmp');}
-async function saveEmp(){const nombre=v('eNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,dui:v('eDUI'),cargo:v('eCargo'),areaId:v('eArea')||null,empresaId:parseInt(v('eEmpresa'))||0,correo:v('eCorreo'),telefono:v('eTel'),estado:v('eEstado')};const r=editingId.emp?await PUT('empleados/'+editingId.emp,data):await POST('empleados',data);if(r&&!r.error){closeModalSafe('ovEmp');await loadAll();renderEmpleados();toast('Empleado guardado');}}
+async function saveEmp(){const nombre=v('eNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,dui:v('eDUI'),cargo:v('eCargo'),areaId:v('eArea')||null,empresaId:parseInt(v('eEmpresa'))||0,correo:v('eCorreo'),telefono:v('eTel'),estado:v('eEstado')};const r=editingId.emp?await PUT('empleados/'+editingId.emp,data):await POST('empleados',data);if(r&&!r.error){closeModal('ovEmp');await loadAll();renderEmpleados();toast('Empleado guardado');}}
 function openArea(id){editingId.area=id||null;document.getElementById('mAreaTitle').textContent=id?'Editar área':'Nueva área';['arNombre','arDesc'].forEach(f=>sv(f,''));if(id){const a=cache.areas.find(x=>x.id==id);if(a){sv('arNombre',a.nombre);sv('arEmpresa',a.empresaId);sv('arResp',a.responsable||'');sv('arDesc',a.descripcion||'');}}openModal('ovArea');}
-async function saveArea(){const nombre=v('arNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,empresaId:parseInt(v('arEmpresa'))||0,responsable:v('arResp')||null,descripcion:v('arDesc')};const r=editingId.area?await PUT('areas/'+editingId.area,data):await POST('areas',data);if(r&&!r.error){closeModalSafe('ovArea');await loadAll();renderAreas();toast('Área guardada');}}
+async function saveArea(){const nombre=v('arNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,empresaId:parseInt(v('arEmpresa'))||0,responsable:v('arResp')||null,descripcion:v('arDesc')};const r=editingId.area?await PUT('areas/'+editingId.area,data):await POST('areas',data);if(r&&!r.error){closeModal('ovArea');await loadAll();renderAreas();toast('Área guardada');}}
 function openEmpresa(id){editingId.empresa=id||null;document.getElementById('mEmpresaTitle').textContent=id?'Editar empresa':'Nueva empresa';['emNombre','emRUC','emContacto','emTel','emDir'].forEach(f=>sv(f,''));if(id){const e=cache.empresas.find(x=>x.id==id);if(e){sv('emNombre',e.nombre);sv('emRUC',e.ruc||'');sv('emContacto',e.contacto||'');sv('emTel',e.tel||'');sv('emDir',e.direccion||'');}}openModal('ovEmpresa');}
-async function saveEmpresa(){const nombre=v('emNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,ruc:v('emRUC'),contacto:v('emContacto'),tel:v('emTel'),direccion:v('emDir')};const r=editingId.empresa?await PUT('empresas/'+editingId.empresa,data):await POST('empresas',data);if(r&&!r.error){closeModalSafe('ovEmpresa');await loadAll();renderEmpresas();toast('Empresa guardada');}}
+async function saveEmpresa(){const nombre=v('emNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,ruc:v('emRUC'),contacto:v('emContacto'),tel:v('emTel'),direccion:v('emDir')};const r=editingId.empresa?await PUT('empresas/'+editingId.empresa,data):await POST('empresas',data);if(r&&!r.error){closeModal('ovEmpresa');await loadAll();renderEmpresas();toast('Empresa guardada');}}
 function openUsuario(id){editingId.user=id||null;document.getElementById('mUserTitle').textContent=id?'Editar usuario':'Nuevo usuario';['uUser','uPass','uNombre'].forEach(f=>sv(f,''));if(id){const u=cache.usuarios.find(x=>x.id==id);if(u){sv('uUser',u.usuario);sv('uNombre',u.nombre||'');sv('uRol',u.rol);sv('uEmpresa',u.empresaId||'');sv('uEstado',u.estado||'activo');}}openModal('ovUser');}
 async function saveUser(){
   const usuario=v('uUser').trim();if(!usuario){toast('El usuario es requerido','warning');return;}
   const pass=v('uPass').trim();if(!editingId.user&&!pass){toast('La contraseña es requerida','warning');return;}
   const data={usuario,nombre:v('uNombre'),rol:v('uRol'),empresaId:v('uEmpresa')||'',estado:v('uEstado')};if(pass)data.password=pass;
-  try{const r=editingId.user?await PUT('usuarios/'+editingId.user,data):await POST('usuarios',{...data,password:pass});if(r&&!r.error){closeModalSafe('ovUser');await loadAll();renderUsuarios();toast('Usuario guardado');}else toast('Error: '+(r&&r.error?r.error:'intente de nuevo'),'warning');}catch(e){toast('Error de conexión','warning');}
+  try{const r=editingId.user?await PUT('usuarios/'+editingId.user,data):await POST('usuarios',{...data,password:pass});if(r&&!r.error){closeModal('ovUser');await loadAll();renderUsuarios();toast('Usuario guardado');}else toast('Error: '+(r&&r.error?r.error:'intente de nuevo'),'warning');}catch(e){toast('Error de conexión','warning');}
 }
 async function delRecord(tabla,id){if(!confirm('¿Eliminar este registro?'))return;await DEL(tabla+'/'+id);await loadAll();toast('Registro eliminado');const m={categorias:'catalogos',traslados:'reportes',bajas:'inventario',empleados:'catalogos',areas:'catalogos',empresas:'catalogos',bancos:'catalogos',usuarios:'sistema',licencias:'tecnologia',historial:'reportes'};if(m[tabla])renderPage(m[tabla]);}
 async function eliminarActivo(id){if(!confirm('¿Eliminar este activo permanentemente?'))return;await DEL('activos/'+id);const aids=cache.asignaciones.filter(a=>a.activoId==id).map(a=>a.id);for(const aid of aids)await DEL('asignaciones/'+aid);await loadAll();renderActivos();toast('Activo eliminado');}
@@ -1637,7 +1637,7 @@ async function saveTraslado(){
   const activoId=parseInt(v('trActivo'))||0,aEmpleadoId=parseInt(v('trNuevoEmp'))||0,fecha=v('trFecha');
   if(!activoId||!aEmpleadoId||!fecha){toast('Complete los campos requeridos','warning');return;}
   const r=await POST('traslado-responsable',{activoId,aEmpleadoId,empresaDestinoId:parseInt(v('trEmpDest'))||0,condicionRecibe:v('trCondicion'),motivo:v('trMotivo'),observaciones:v('trObs'),fecha});
-  if(r&&r.ok){closeModalSafe('ovTraslado');await loadAll();renderTraslados();toast('Traslado registrado');}
+  if(r&&r.ok){closeModal('ovTraslado');await loadAll();renderTraslados();toast('Traslado registrado');}
   else toast('Error al registrar','warning');
 }
 
@@ -1652,7 +1652,7 @@ async function saveCategoria(){
   const nombre=v('cNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
   const data={nombre,tipo:v('cTipo'),vidaUtil:parseInt(v('cVidaUtil'))||0,depreciacion:parseFloat(v('cDep'))||0,descripcion:v('cDesc')};
   const r=editingId.cat?await PUT('categorias/'+editingId.cat,data):await POST('categorias',data);
-  if(r&&!r.error){closeModalSafe('ovCategoria');await loadAll();renderCategorias();toast('Categoría guardada');}
+  if(r&&!r.error){closeModal('ovCategoria');await loadAll();renderCategorias();toast('Categoría guardada');}
   else toast('Error al guardar','warning');
 }
 
