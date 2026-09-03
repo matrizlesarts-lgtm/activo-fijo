@@ -1148,6 +1148,25 @@ function sortLicPersonas(col){
   if(licPersSort.col===col)licPersSort.dir*=-1;else{licPersSort.col=col;licPersSort.dir=1;}
   renderLicPorPersona();
 }
+async function toggleVencPasadoPago(licId,fecha,tipo){
+  const l=cache.licencias.find(x=>x.id==licId);if(!l)return;
+  let arr=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map(x=>({...x})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||''}]:[]);
+  let entry=arr.find(x=>x.fecha===fecha);
+  let nuevoPagado;
+  if(entry){
+    nuevoPagado=!entry.pagado;
+    entry.pagado=nuevoPagado;
+    entry.fechaPago=nuevoPagado?new Date().toISOString().slice(0,10):'';
+  }else{
+    nuevoPagado=true;
+    arr.push({fecha,pagado:true,fechaPago:new Date().toISOString().slice(0,10)});
+  }
+  const pagado=arr.length?arr.every(x=>x.pagado):false;
+  const ultimoPago=arr.filter(x=>x.pagado&&x.fechaPago).map(x=>x.fechaPago).sort().pop()||'';
+  const r=await PUT('licencias/'+licId,{vencimientos:arr,pagado,fechaPago:ultimoPago});
+  if(r&&!r.error){await loadAll();renderLicencias();toast(nuevoPagado?'Marcada como pagada':'Marcada como no pagada');}
+  else toast('Error al actualizar','warning');
+}
 async function toggleVencPersonaPago(licId,idx){
   const l=cache.licencias.find(x=>x.id==licId);if(!l)return;
   const arr=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map(x=>({...x})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||''}]:[]);
@@ -1268,9 +1287,20 @@ function renderLicPorPersona(){
         <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.licId})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.licId})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.licId})" title="Eliminar">🗑</button></td>
       </tr>`;
       if(pasados.length){
+        const lFull=cache.licencias.find(x=>x.id==r.licId);
+        const vencsFull=(lFull&&lFull.vencimientos)||[];
         html+=`<tr id="${rowId}" style="display:none;background:var(--bg2)"><td colspan="9" style="font-size:12px;color:var(--text2);padding:10px 16px">
           <strong>Vencimientos pasados de esta licencia (desde ${r.fechaVenc} hasta hoy):</strong><br>
-          ${pasados.map(f=>`<span class="tag" style="margin:2px">${f}</span>`).join(' ')}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+          ${pasados.map(f=>{
+            const existente=vencsFull.find(x=>x.fecha===f);
+            const pag=existente?!!existente.pagado:false;
+            return `<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px">
+              <span>${f}</span>
+              <span style="cursor:pointer" onclick="toggleVencPasadoPago(${r.licId},'${f}','${r.tipo}')" title="Clic para cambiar">${pag?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>
+            </span>`;
+          }).join('')}
+          </div>
         </td></tr>`;
       }
     });
