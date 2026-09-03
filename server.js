@@ -503,13 +503,15 @@ const server = http.createServer(async (req, res) => {
     if (err) {
       fs.readFile(path.join(__dirname, 'public', 'index.html'), (e2, html) => {
         if (e2) { res.writeHead(404); return res.end('Not found'); }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
         res.end(html);
       });
       return;
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    if (ext === '.html') headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    res.writeHead(200, headers);
     res.end(data);
   });
   } catch(err) {
