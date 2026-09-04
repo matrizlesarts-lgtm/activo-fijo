@@ -1167,12 +1167,19 @@ async function toggleVencPasadoPago(licId,fecha,tipo){
   if(r&&!r.error){await loadAll();renderLicencias();toast(nuevoPagado?'Marcada como pagada':'Marcada como no pagada');}
   else toast('Error al actualizar','warning');
 }
-async function toggleVencPersonaPago(licId,idx){
+async function toggleVencPersonaPago(licId,fecha){
   const l=cache.licencias.find(x=>x.id==licId);if(!l)return;
-  const arr=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map(x=>({...x})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||''}]:[]);
-  if(!arr[idx])return;
-  const nuevoPagado=!arr[idx].pagado;
-  arr[idx]={...arr[idx],pagado:nuevoPagado,fechaPago:nuevoPagado?new Date().toISOString().slice(0,10):''};
+  let arr=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map(x=>({...x})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||''}]:[]);
+  let entry=fecha?arr.find(x=>x.fecha===fecha):arr[0];
+  let nuevoPagado;
+  if(entry){
+    nuevoPagado=!entry.pagado;
+    entry.pagado=nuevoPagado;
+    entry.fechaPago=nuevoPagado?new Date().toISOString().slice(0,10):'';
+  }else if(fecha){
+    nuevoPagado=true;
+    arr.push({fecha,pagado:true,fechaPago:new Date().toISOString().slice(0,10)});
+  }else return;
   const pagado=arr.length?arr.every(x=>x.pagado):false;
   const ultimoPago=arr.filter(x=>x.pagado&&x.fechaPago).map(x=>x.fechaPago).sort().pop()||'';
   const r=await PUT('licencias/'+licId,{vencimientos:arr,pagado,fechaPago:ultimoPago});
@@ -1199,6 +1206,37 @@ function toggleVencHistorial(rowId){
   const el=document.getElementById(rowId);
   if(el)el.style.display=el.style.display==='none'?'table-row':'none';
 }
+function proyectarEntradasLicencia(l,desde,hasta){
+  // Combina las fechas realmente guardadas (con su estado de pago) con las fechas
+  // periodicas proyectadas que caen dentro del rango filtrado, sin inventar fechas
+  // anteriores al primer vencimiento real de la licencia.
+  const guardadas=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map((x,i)=>({...x,idx:i})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}]:[]);
+  if(!desde&&!hasta){
+    return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
+  }
+  if(l.tipo!=='mensual'&&l.tipo!=='anual'){
+    // Perpetua u otro: no hay periodicidad que proyectar, solo mostrar lo guardado
+    return guardadas;
+  }
+  const base=guardadas.length?guardadas.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''))[0].fecha:l.fechaVenc;
+  if(!base)return guardadas;
+  const porFecha={};
+  guardadas.forEach(g=>{if(g.fecha)porFecha[g.fecha]=g;});
+  // Genera todas las fechas periodicas desde 'base' hacia adelante hasta cubrir 'hasta' (o hoy+un anio si no hay hasta)
+  let d=new Date(base+'T00:00:00');
+  const limite=hasta?new Date(hasta+'T00:00:00'):(()=>{const x=new Date();x.setFullYear(x.getFullYear()+1);return x;})();
+  let guard=0;
+  while(d<=limite&&guard<600){
+    const f=d.toISOString().slice(0,10);
+    if(!porFecha[f]){
+      porFecha[f]={fecha:f,pagado:false,fechaPago:'',idx:'proy_'+f};
+    }
+    if(l.tipo==='mensual')d=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
+    else d=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+    guard++;
+  }
+  return Object.values(porFecha);
+}
 function renderLicPorPersona(){
   const tbody=document.getElementById('tbLicPorPersona');
   if(!tbody)return;
@@ -1207,7 +1245,7 @@ function renderLicPorPersona(){
   let rows=[];
   baseSet.forEach(l=>{
     const emp=l.empleadoId?cache.empleados.find(x=>x.id==l.empleadoId):null;
-    const entradas=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map((x,i)=>({...x,idx:i})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}]:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}]);
+    const entradas=proyectarEntradasLicencia(l,desde,hasta);
     entradas.forEach(ve=>{
       if(desde&&ve.fecha&&ve.fecha<desde)return;
       if(hasta&&ve.fecha&&ve.fecha>hasta)return;
@@ -1271,16 +1309,10 @@ function renderLicPorPersona(){
   listaGrupos.forEach(g=>{
     html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} fecha${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
     g.items.forEach((r,ridx)=>{
-      const pagoCell=r.vencIdx==='legacy'&&!r.fechaVenc?(r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')):`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${typeof r.vencIdx==='string'?"'"+r.vencIdx+"'":r.vencIdx})" title="Clic para cambiar">${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>`;
-      const rowId='vh_'+r.licId+'_'+ridx;
-      const lFull=cache.licencias.find(x=>x.id==r.licId);
-      const vencsFull=(lFull&&lFull.vencimientos)||[];
-      const fechasYaListadas=new Set(vencsFull.map(x=>x.fecha));
-      const pasadosRaw=r.estado==='vencida'?calcVencimientosPasados(r.fechaVenc,r.tipo):[];
-      // Excluye la fecha de esta fila y cualquier fecha que ya tenga su propia fila (ya esta en vencimientos reales)
-      const pasados=pasadosRaw.filter(f=>f!==r.fechaVenc&&!fechasYaListadas.has(f));
-      const fechaCell=pasados.length?`${r.fechaVenc} <span style="cursor:pointer;color:var(--blue)" onclick="toggleVencHistorial('${rowId}')" title="Ver vencimientos pasados">▾ (${pasados.length})</span>`:(r.fechaVenc||(r.tipo==='perpetua'?'—':'-'));
-      html+=`<tr>
+      const pagoCell=`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${r.fechaVenc?"'"+r.fechaVenc+"'":'null'})" title="Clic para cambiar">${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>`;
+      const fechaCell=r.fechaVenc||(r.tipo==='perpetua'?'—':'-');
+      const esFuturo=r.fechaVenc&&new Date(r.fechaVenc+'T00:00:00')>new Date();
+      html+=`<tr${esFuturo?' style="opacity:0.75"':''}>
         <td>${r.licencia}</td>
         <td>${r.correo||'-'}</td>
         <td>${r.tipo||'-'}</td>
@@ -1291,21 +1323,6 @@ function renderLicPorPersona(){
         <td>${pagoCell}</td>
         <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.licId})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.licId})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.licId})" title="Eliminar">🗑</button></td>
       </tr>`;
-      if(pasados.length){
-        html+=`<tr id="${rowId}" style="display:none;background:var(--bg2)"><td colspan="9" style="font-size:12px;color:var(--text2);padding:10px 16px">
-          <strong>Vencimientos pasados de esta licencia (desde ${r.fechaVenc} hasta hoy):</strong><br>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-          ${pasados.map(f=>{
-            const existente=vencsFull.find(x=>x.fecha===f);
-            const pag=existente?!!existente.pagado:false;
-            return `<span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:4px 8px">
-              <span>${f}</span>
-              <span style="cursor:pointer" onclick="toggleVencPasadoPago(${r.licId},'${f}','${r.tipo}')" title="Clic para cambiar">${pag?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>
-            </span>`;
-          }).join('')}
-          </div>
-        </td></tr>`;
-      }
     });
   });
   tbody.innerHTML=html;
