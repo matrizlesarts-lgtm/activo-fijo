@@ -281,10 +281,9 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <th class="sortable-th" onclick="sortLicPersonas('correo')">Correo registrado <span id="sortIc-correo"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('tipo')">Tipo <span id="sortIc-tipo"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('fechaVenc')">Fecha de vencimiento <span id="sortIc-fechaVenc"></span></th>
-        <th class="sortable-th" onclick="sortLicPersonas('estado')">Estado <span id="sortIc-estado"></span></th>
+        <th class="sortable-th" onclick="sortLicPersonas('estado')">Estado y pago <span id="sortIc-estado"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('empresa')">Empresa <span id="sortIc-empresa"></span></th>
         <th class="sortable-th" onclick="sortLicPersonas('costo')">Costo <span id="sortIc-costo"></span></th>
-        <th class="sortable-th" onclick="sortLicPersonas('pago')">Pago <span id="sortIc-pago"></span></th>
         <th>Acciones</th>
       </tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
     </div>
@@ -1304,23 +1303,28 @@ function renderLicPorPersona(){
   else if(orden==='montoAsc')listaGrupos.sort((a,b)=>a.monto-b.monto);
   else if(orden==='cantidadDesc')listaGrupos.sort((a,b)=>b.items.length-a.items.length);
 
-  if(!listaGrupos.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3)">Sin fechas en el rango seleccionado</td></tr>';return;}
+  if(!listaGrupos.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3)">Sin fechas en el rango seleccionado</td></tr>';return;}
   let html='';
   listaGrupos.forEach(g=>{
-    html+=`<tr style="background:var(--bg2)"><td colspan="9" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} fecha${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
+    html+=`<tr style="background:var(--bg2)"><td colspan="8" style="font-weight:600">👤 ${g.persona} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.correoPersona} · ${g.items.length} fecha${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
     g.items.forEach((r,ridx)=>{
-      const pagoCell=`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${r.fechaVenc?"'"+r.fechaVenc+"'":'null'})" title="Clic para cambiar">${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>`;
       const fechaCell=r.fechaVenc||(r.tipo==='perpetua'?'—':'-');
       const esFuturo=r.fechaVenc&&new Date(r.fechaVenc+'T00:00:00')>new Date();
+      // Combina Estado + Pago en un solo indicador para que sea claro de un vistazo
+      let estPagoTexto,estPagoCls;
+      if(r.estado==='activa'){estPagoTexto=r.pagoBool?'✅ Activa y pagada':'⏳ Activa, pendiente de pago';estPagoCls=r.pagoBool?'green':'amber';}
+      else if(r.estado==='por vencer'){estPagoTexto=r.pagoBool?'✅ Por vencer, ya pagada':'⚠️ Por vencer, pendiente de pago';estPagoCls=r.pagoBool?'green':'amber';}
+      else if(r.estado==='vencida'){estPagoTexto=r.pagoBool?'✅ Vencida, ya pagada':'🔴 Vencida, sin pagar';estPagoCls=r.pagoBool?'green':'red';}
+      else{estPagoTexto=r.pagoBool?'✅ Pagada':'❌ No pagada';estPagoCls=r.pagoBool?'green':'red';}
+      const estPagoCell=`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${r.fechaVenc?"'"+r.fechaVenc+"'":'null'})" title="Clic para cambiar el pago">${badge(estPagoTexto,estPagoCls)}</span>`;
       html+=`<tr${esFuturo?' style="opacity:0.75"':''}>
         <td>${r.licencia}</td>
         <td>${r.correo||'-'}</td>
         <td>${r.tipo||'-'}</td>
         <td>${fechaCell}</td>
-        <td>${badge(r.estado,r.estCls)}</td>
+        <td>${estPagoCell}</td>
         <td>${r.empresa}</td>
         <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
-        <td>${pagoCell}</td>
         <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.licId})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.licId})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.licId})" title="Eliminar">🗑</button></td>
       </tr>`;
     });
