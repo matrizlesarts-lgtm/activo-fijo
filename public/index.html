@@ -1273,7 +1273,12 @@ function renderLicPorPersona(){
     g.items.forEach((r,ridx)=>{
       const pagoCell=r.vencIdx==='legacy'&&!r.fechaVenc?(r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')):`<span style="cursor:pointer" onclick="toggleVencPersonaPago(${r.licId},${typeof r.vencIdx==='string'?"'"+r.vencIdx+"'":r.vencIdx})" title="Clic para cambiar">${r.pagoBool?badge('✅ Pagada','green'):badge('❌ No pagada','red')}</span>`;
       const rowId='vh_'+r.licId+'_'+ridx;
-      const pasados=r.estado==='vencida'?calcVencimientosPasados(r.fechaVenc,r.tipo):[];
+      const lFull=cache.licencias.find(x=>x.id==r.licId);
+      const vencsFull=(lFull&&lFull.vencimientos)||[];
+      const fechasYaListadas=new Set(vencsFull.map(x=>x.fecha));
+      const pasadosRaw=r.estado==='vencida'?calcVencimientosPasados(r.fechaVenc,r.tipo):[];
+      // Excluye la fecha de esta fila y cualquier fecha que ya tenga su propia fila (ya esta en vencimientos reales)
+      const pasados=pasadosRaw.filter(f=>f!==r.fechaVenc&&!fechasYaListadas.has(f));
       const fechaCell=pasados.length?`${r.fechaVenc} <span style="cursor:pointer;color:var(--blue)" onclick="toggleVencHistorial('${rowId}')" title="Ver vencimientos pasados">▾ (${pasados.length})</span>`:(r.fechaVenc||(r.tipo==='perpetua'?'—':'-'));
       html+=`<tr>
         <td>${r.licencia}</td>
@@ -1287,8 +1292,6 @@ function renderLicPorPersona(){
         <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.licId})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.licId})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.licId})" title="Eliminar">🗑</button></td>
       </tr>`;
       if(pasados.length){
-        const lFull=cache.licencias.find(x=>x.id==r.licId);
-        const vencsFull=(lFull&&lFull.vencimientos)||[];
         html+=`<tr id="${rowId}" style="display:none;background:var(--bg2)"><td colspan="9" style="font-size:12px;color:var(--text2);padding:10px 16px">
           <strong>Vencimientos pasados de esta licencia (desde ${r.fechaVenc} hasta hoy):</strong><br>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
