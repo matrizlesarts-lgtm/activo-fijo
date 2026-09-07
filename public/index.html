@@ -855,7 +855,10 @@ function showApp(){
   // Show empresa in sidebar footer
   const empEl = document.getElementById('sidebarEmpresa');
   if(empEl) empEl.textContent = currentUser.empresaId ? '' : 'Todas las empresas';
-  navigate('dashboard');
+  const validPages=['dashboard','tecnologia','inventario','catalogos','reportes','sistema'];
+  let lastPage=localStorage.getItem('lastPage');
+  if(!validPages.includes(lastPage)||!document.getElementById('page-'+lastPage))lastPage='dashboard';
+  navigate(lastPage);
 }
 
 const TITLES={dashboard:'Dashboard',equipos:'💻 Equipos tecnológicos',licencias:'🔑 Licencias de software',asignaciones:'👤 Asignaciones',activos:'📦 Activos',bodega:'🏪 Bodega',bajas:'🗑️ Bajas',empleados:'👥 Empleados',areas:'🏬 Áreas',empresas:'🏢 Empresas',traslados:'⇄ Traslados',categorias:'◈ Categorías',historial:'📋 Historial',depreciacion:'📉 Depreciación',reportes:'🖨️ Reportes',usuarios:'⚙️ Usuarios'};
@@ -864,8 +867,18 @@ async function navigate(page){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.getElementById('pageTitle').textContent=TITLES[page]||page;
+  localStorage.setItem('lastPage',page);
   await loadAll();
   renderPage(page);
+  restoreSubPage('page-'+page);
+}
+function restoreSubPage(pageId){
+  const paneId=localStorage.getItem('lastSubPage:'+pageId);
+  if(!paneId)return;
+  const pageEl=document.getElementById(pageId);
+  if(!pageEl)return;
+  const btn=Array.from(pageEl.querySelectorAll('.page-tab')).find(b=>(b.getAttribute('onclick')||'').includes(paneId));
+  if(btn)switchPageTab(btn,paneId);
 }
 const MODALES_FORM=['ovEquipo','ovLicencia','ovActivo','ovAsig','ovBaja','ovEmp','ovBanco','ovArea','ovEmpresa','ovCategoria','ovTraslado','ovUser'];
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1442,6 +1455,7 @@ function switchPageTab(btn,paneId){
   page.querySelectorAll('.sub-page').forEach(p=>p.classList.remove('active'));
   const el=document.getElementById(paneId);
   if(el){el.classList.add('active');}
+  if(page&&page.id)localStorage.setItem('lastSubPage:'+page.id,paneId);
 }
 function switchTab(btn,paneId){const t=btn.closest('.tabs');t.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const m=btn.closest('.modal');m.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));document.getElementById(paneId).classList.add('active');}
 function resetTabs(mid){const m=document.getElementById(mid);m.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));m.querySelectorAll('.tab-pane').forEach((p,i)=>p.classList.toggle('active',i===0));}
