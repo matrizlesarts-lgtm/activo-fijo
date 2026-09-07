@@ -1344,7 +1344,13 @@ function proyectarEntradasLicencia(l,desde,hasta){
     if(!desde&&!hasta)return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
     return guardadas;
   }
-  const base=guardadas.length?guardadas.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''))[0].fecha:l.fechaVenc;
+  // La base del calculo debe ser la fecha mas temprana conocida: la fecha de inicio real
+  // de la licencia, cualquier vencimiento ya guardado, o la fecha de vencimiento — la que sea menor.
+  const candidatas=[];
+  if(l.fechaInicio)candidatas.push(l.fechaInicio);
+  guardadas.forEach(g=>{if(g.fecha)candidatas.push(g.fecha);});
+  if(l.fechaVenc)candidatas.push(l.fechaVenc);
+  const base=candidatas.length?candidatas.sort()[0]:null;
   if(!base)return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
   const porFecha={};
   guardadas.forEach(g=>{if(g.fecha)porFecha[g.fecha]=g;});
