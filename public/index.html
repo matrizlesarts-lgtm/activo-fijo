@@ -1335,23 +1335,25 @@ function toggleVencHistorial(rowId){
 }
 function proyectarEntradasLicencia(l,desde,hasta){
   // Combina las fechas realmente guardadas (con su estado de pago) con las fechas
-  // periodicas proyectadas que caen dentro del rango filtrado, sin inventar fechas
-  // anteriores al primer vencimiento real de la licencia.
+  // periodicas proyectadas, sin inventar fechas anteriores al primer vencimiento real
+  // de la licencia. Para mensual/anual, SIEMPRE genera las fechas pasadas (aunque no
+  // haya filtro de rango activo), para que se puedan marcar como pagadas o no.
   const guardadas=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map((x,i)=>({...x,idx:i})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}]:[]);
-  if(!desde&&!hasta){
-    return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
-  }
   if(l.tipo!=='mensual'&&l.tipo!=='anual'){
     // Perpetua u otro: no hay periodicidad que proyectar, solo mostrar lo guardado
+    if(!desde&&!hasta)return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
     return guardadas;
   }
   const base=guardadas.length?guardadas.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''))[0].fecha:l.fechaVenc;
-  if(!base)return guardadas;
+  if(!base)return guardadas.length?guardadas:[{fecha:'',pagado:!!l.pagado,fechaPago:l.fechaPago||'',idx:'legacy'}];
   const porFecha={};
   guardadas.forEach(g=>{if(g.fecha)porFecha[g.fecha]=g;});
-  // Genera todas las fechas periodicas desde 'base' hacia adelante hasta cubrir 'hasta' (o hoy+un anio si no hay hasta)
+  // Genera todas las fechas periodicas desde 'base' hacia adelante:
+  // - si hay 'hasta' explicito, se respeta
+  // - si hay 'desde' pero no 'hasta', proyecta 1 año adelante (para ver tambien futuras)
+  // - si NO hay ningun filtro, proyecta solo hasta hoy (las que ya han pasado y estan pendientes de marcar)
   let d=new Date(base+'T00:00:00');
-  const limite=hasta?new Date(hasta+'T00:00:00'):(()=>{const x=new Date();x.setFullYear(x.getFullYear()+1);return x;})();
+  const limite=hasta?new Date(hasta+'T00:00:00'):(desde?(()=>{const x=new Date();x.setFullYear(x.getFullYear()+1);return x;})():new Date());
   let guard=0;
   while(d<=limite&&guard<600){
     const f=d.toISOString().slice(0,10);
