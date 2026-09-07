@@ -418,7 +418,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   <div id="sub-historial" class="sub-page active">
     <div class="card">
       <div class="card-header"><span class="card-title">📋 Historial de movimientos</span></div>
-      <div class="search-row"><select id="fHistTipo" onchange="renderHistorial()"><option value="">Todos los tipos</option><option value="alta">Alta</option><option value="asignacion">Asignación</option><option value="traslado">Traslado</option><option value="devolucion">Devolución</option><option value="baja">Baja</option></select></div>
+      <div class="search-row"><input type="text" id="searchHist" placeholder="🔍 Buscar en el historial..." oninput="renderHistorial()"><select id="fHistTipo" onchange="renderHistorial()"><option value="">Todos los tipos</option><option value="alta">Alta</option><option value="asignacion">Asignación</option><option value="traslado">Traslado</option><option value="devolucion">Devolución</option><option value="baja">Baja</option></select></div>
       <div id="historialList"></div>
     </div>
   </div>
@@ -887,6 +887,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModalSafe(ov.id);}));
   initSidebarPref();
   initSortableTables();
+  initTableSearch();
 });
 function cellSortText(cell){
   const clone=cell.cloneNode(true);
@@ -936,6 +937,35 @@ function initSortableTables(){
       });
     });
     table.dataset.sortInit='1';
+  });
+}
+function normSearchText(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+function initTableSearch(){
+  document.querySelectorAll('.content table, .table-wrap table').forEach(table=>{
+    if(table.dataset.searchInit)return;
+    const tbody=table.querySelector('tbody');
+    if(!tbody||!tbody.id)return;
+    if(tbody.id==='tbLicPorPersona'||tbody.id==='tbDiagnostico')return; // tienen su propio filtro especial
+    const wrap=table.closest('.table-wrap');
+    if(!wrap)return;
+    const card=wrap.closest('.card')||wrap.parentElement;
+    if(card&&card.querySelector('.search-row input[type="text"]'))return; // ya tiene buscador propio (Equipos/Activos/Licencias)
+    const box=document.createElement('div');
+    box.className='search-row';
+    box.innerHTML='<input type="text" placeholder="🔍 Buscar en esta tabla...">';
+    wrap.parentNode.insertBefore(box,wrap);
+    const input=box.querySelector('input');
+    input.addEventListener('input',()=>{
+      const q=normSearchText(input.value.trim());
+      Array.from(tbody.children).forEach(r=>{
+        if(r.querySelector('td[colspan]')){r.style.display='';return;}
+        const text=normSearchText(r.textContent);
+        r.style.display=(!q||text.includes(q))?'':'none';
+      });
+    });
+    table.dataset.searchInit='1';
   });
 }
 function initSidebarPref(){
@@ -1258,7 +1288,8 @@ function renderAsignaciones(){
 }
 function renderHistorial(){
   const fT=v('fHistTipo');
-  const list=[...cache.historial].reverse().filter(h=>(!fT||h.tipo===fT)&&(!globalEmp||!h.empresaId||String(h.empresaId)===globalEmp));
+  const q=v('searchHist').toLowerCase();
+  const list=[...cache.historial].reverse().filter(h=>(!fT||h.tipo===fT)&&(!globalEmp||!h.empresaId||String(h.empresaId)===globalEmp)&&(!q||h.descripcion.toLowerCase().includes(q)));
   document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">${tipoBadge(h.tipo)}<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">${h.fecha}</span><button class="btn btn-sm btn-danger" onclick="delRecord('historial',${h.id})" title="Eliminar registro" style="padding:2px 8px;font-size:11px">🗑</button></div></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
 }
 function renderDepr(){
