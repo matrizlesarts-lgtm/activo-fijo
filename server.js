@@ -433,7 +433,7 @@ const server = http.createServer(async (req, res) => {
       const fi = db.fichas.findIndex(f => f.id === parseInt(parts[2]));
       if (fi < 0) return jsonRes(res, 404, { error: 'Ficha no encontrada' });
       const f = db.fichas[fi];
-      const emp = { id: nextId(db.empleados), nombre: body.nombre || f.nombre || f.nombrePre || '', dui: body.dui || f.dui || '', cargo: body.cargo || f.cargo || f.cargoPre || '', areaId: body.areaId || null, empresaId: body.empresaId || f.empresaId || null, correo: body.correo || f.correo || '', telefono: body.telefono || f.telefono || '', estado: 'activo', fotoUrl: f.fotoUrl || '' };
+      const emp = { id: nextId(db.empleados), nombre: body.nombre || f.nombre || f.nombrePre || '', dui: body.dui || f.dui || '', cargo: body.cargo || f.cargo || f.cargoPre || '', areaId: body.areaId || null, empresaId: body.empresaId || f.empresaId || null, correo: body.correo || f.correo || '', telefono: body.telefono || f.telefono || '', tipoTelefono: body.tipoTelefono || f.tipoTelefono || '', estado: 'activo', fotoUrl: f.fotoUrl || '' };
       db.empleados.push(emp);
       db.fichas[fi].estado = 'aprobada';
       db.fichas[fi].empleadoId = emp.id;
