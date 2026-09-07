@@ -278,6 +278,9 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
 
     <div id="licView-personas" class="lic-subview" style="display:none">
+      <div class="search-row" style="margin-bottom:10px">
+        <input type="text" id="searchLicPersona" placeholder="🔍 Buscar por persona, licencia, correo..." oninput="renderLicPorPersona()">
+      </div>
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;font-size:13px;color:var(--text2)">
         <div style="display:flex;align-items:center;gap:8px">
           <span>📅 Rango de fechas:</span>
@@ -1448,6 +1451,10 @@ function renderLicPorPersona(){
   });
 
   // Orden de las columnas dentro de cada persona (clic en encabezado)
+  const q=normSearchText(v('searchLicPersona').trim());
+  if(q){
+    rows=rows.filter(r=>normSearchText(r.persona+' '+r.licencia+' '+r.correoPersona+' '+r.correo+' '+r.empresa).includes(q));
+  }
   const{col,dir}=licPersSort;
   rows.sort((a,b)=>{
     let av=a[col],bv=b[col];
