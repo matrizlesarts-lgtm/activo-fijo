@@ -1052,14 +1052,14 @@ async function renderDashboard(){
   const asignadosCount=activosActivos.filter(a=>asigActual(a.id)).length;
   const s={total:actList.length,bodega:activosActivos.length-asignadosCount};
   const hoy=new Date();const en30=new Date();en30.setDate(en30.getDate()+30);
-  const licsVencer=licList.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<=en30&&new Date(l.fechaVenc)>=hoy);
-  const licsVencidas=licList.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<hoy);
+  const licsVencer=licList.filter(l=>getLicEst(l).st==='por vencer');
+  const licsVencidas=licList.filter(l=>getLicEst(l).st==='vencida');
   const eqDisp=equiposList.filter(e=>e.estado==='disponible').length;
   const eqAsig=equiposList.filter(e=>e.estado==='asignado').length;
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg)">📦</div><div><div class="stat-label">Total activos</div><div class="stat-value">${s.total}</div><div class="stat-sub">registrados</div></div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">💻</div><div><div class="stat-label">Equipos disponibles</div><div class="stat-value">${eqDisp}</div><div class="stat-sub">${eqAsig} asignados</div></div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:var(--purple-bg)">🔑</div><div><div class="stat-label">Licencias activas</div><div class="stat-value">${licList.filter(l=>!l.fechaVenc||new Date(l.fechaVenc)>=hoy).length}</div><div class="stat-sub">${licsVencer.length} por vencer</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--purple-bg)">🔑</div><div><div class="stat-label">Licencias activas</div><div class="stat-value">${licList.filter(l=>getLicEst(l).st!=='vencida').length}</div><div class="stat-sub">${licsVencer.length} por vencer</div></div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🏪</div><div><div class="stat-label">En bodega</div><div class="stat-value">${s.bodega}</div><div class="stat-sub">sin asignar</div></div></div>`;
   const ult=historialList.slice(-5).reverse();
   document.getElementById('dash-actividad').innerHTML=ult.length?ult.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between">${tipoBadge(h.tipo)}<span style="font-size:11px;color:var(--text3)">${h.fecha}</span></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin actividad</div>';
@@ -1100,10 +1100,16 @@ function renderEquipos(){
 }
 
 function getLicEst(l){
-  if(!l.fechaVenc||l.tipo==='perpetua')return{st:'activa',cls:'green'};
-  const hoy=new Date(),v2=new Date(l.fechaVenc),en30=new Date();en30.setDate(en30.getDate()+30);
-  if(v2<hoy)return{st:'vencida',cls:'red'};
-  if(v2<=en30)return{st:'por vencer',cls:'amber'};
+  if(l.tipo==='perpetua')return{st:'activa',cls:'green'};
+  const hoy=new Date();
+  // "Vencida" ahora significa: hay al menos un ciclo (mensual/anual) ya vencido que sigue sin pagar,
+  // usando el mismo calculo real de ciclos que la vista "Por persona" (no solo la fecha fija guardada).
+  const entradas=proyectarEntradasLicencia(l,'','');
+  const tieneVencidoSinPagar=entradas.some(e=>e.fecha&&new Date(e.fecha+'T00:00:00')<=hoy&&!e.pagado);
+  if(tieneVencidoSinPagar)return{st:'vencida',cls:'red'};
+  if(!l.fechaVenc)return{st:'activa',cls:'green'};
+  const v2=new Date(l.fechaVenc),en30=new Date();en30.setDate(en30.getDate()+30);
+  if(v2<=en30&&v2>=hoy)return{st:'por vencer',cls:'amber'};
   return{st:'activa',cls:'green'};
 }
 function getTarjetaEst(l){
