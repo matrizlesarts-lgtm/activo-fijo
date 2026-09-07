@@ -647,7 +647,8 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="form-row"><div class="fgroup"><label>Nombre completo *</label><input id="eNombre"></div><div class="fgroup"><label>DUI / Identificación</label><input id="eDUI"></div></div>
     <div class="form-row"><div class="fgroup"><label>Cargo *</label><input id="eCargo"></div><div class="fgroup"><label>Área</label><select id="eArea"><option value="">Sin área</option></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Empresa *</label><select id="eEmpresa"></select></div><div class="fgroup"><label>Correo</label><input id="eCorreo" type="email"></div></div>
-    <div class="form-row"><div class="fgroup"><label>Teléfono</label><input id="eTel"></div><div class="fgroup"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Teléfono</label><input id="eTel"></div><div class="fgroup"><label>Tipo de número</label><select id="eTipoTel"><option value="">Sin especificar</option><option value="corporativo">📱 Corporativo</option><option value="personal">🏠 Personal</option></select></div></div>
+    <div class="form-row"><div class="fgroup"><label>Estado</label><select id="eEstado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="despedido">Despedido</option></select></div></div>
     <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovEmp')">Cancelar</button><button class="btn btn-primary" onclick="saveEmp()">Guardar</button></div>
   </div>
 </div>
@@ -1681,7 +1682,7 @@ async function saveBaja(){
   const r=await POST('dar-baja',{activoId,fecha,tipo:v('baTipo'),motivo:v('baMotivo'),autorizado:v('baAutorizado'),reporte:''});
   if(r&&r.ok){closeModal('ovBaja');await loadAll();renderBajas();renderActivos();toast('Baja registrada');}
 }
-function openEmpleado(id){editingId.emp=id||null;document.getElementById('mEmpTitle').textContent=id?'Editar empleado':'Nuevo empleado';['eNombre','eDUI','eCargo','eCorreo','eTel'].forEach(f=>sv(f,''));if(id){const e=cache.empleados.find(x=>x.id==id);if(e){sv('eNombre',e.nombre);sv('eDUI',e.dui||'');sv('eCargo',e.cargo);sv('eArea',e.areaId||'');sv('eEmpresa',e.empresaId);sv('eCorreo',e.correo||'');sv('eTel',e.telefono||'');sv('eEstado',e.estado);}}openModal('ovEmp');}
+function openEmpleado(id){editingId.emp=id||null;document.getElementById('mEmpTitle').textContent=id?'Editar empleado':'Nuevo empleado';['eNombre','eDUI','eCargo','eCorreo','eTel'].forEach(f=>sv(f,''));sv('eTipoTel','');if(id){const e=cache.empleados.find(x=>x.id==id);if(e){sv('eNombre',e.nombre);sv('eDUI',e.dui||'');sv('eCargo',e.cargo);sv('eArea',e.areaId||'');sv('eEmpresa',e.empresaId);sv('eCorreo',e.correo||'');sv('eTel',e.telefono||'');sv('eTipoTel',e.tipoTelefono||'');sv('eEstado',e.estado);}}openModal('ovEmp');}
 function duplicarEmpleado(id){
   openEmpleado(id);
   editingId.emp=null;
@@ -1691,9 +1692,10 @@ function duplicarEmpleado(id){
   sv('eDUI','');
   sv('eCorreo','');
   sv('eTel','');
+  sv('eTipoTel','');
   toast('Completa el nombre y datos personales antes de guardar');
 }
-async function saveEmp(){const nombre=v('eNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,dui:v('eDUI'),cargo:v('eCargo'),areaId:v('eArea')||null,empresaId:parseInt(v('eEmpresa'))||0,correo:v('eCorreo'),telefono:v('eTel'),estado:v('eEstado')};const r=editingId.emp?await PUT('empleados/'+editingId.emp,data):await POST('empleados',data);if(r&&!r.error){closeModal('ovEmp');await loadAll();renderEmpleados();toast('Empleado guardado');}}
+async function saveEmp(){const nombre=v('eNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,dui:v('eDUI'),cargo:v('eCargo'),areaId:v('eArea')||null,empresaId:parseInt(v('eEmpresa'))||0,correo:v('eCorreo'),telefono:v('eTel'),tipoTelefono:v('eTipoTel'),estado:v('eEstado')};const r=editingId.emp?await PUT('empleados/'+editingId.emp,data):await POST('empleados',data);if(r&&!r.error){closeModal('ovEmp');await loadAll();renderEmpleados();toast('Empleado guardado');}}
 function openArea(id){editingId.area=id||null;document.getElementById('mAreaTitle').textContent=id?'Editar área':'Nueva área';['arNombre','arDesc'].forEach(f=>sv(f,''));if(id){const a=cache.areas.find(x=>x.id==id);if(a){sv('arNombre',a.nombre);sv('arEmpresa',a.empresaId);sv('arResp',a.responsable||'');sv('arDesc',a.descripcion||'');}}openModal('ovArea');}
 async function saveArea(){const nombre=v('arNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}const data={nombre,empresaId:parseInt(v('arEmpresa'))||0,responsable:v('arResp')||null,descripcion:v('arDesc')};const r=editingId.area?await PUT('areas/'+editingId.area,data):await POST('areas',data);if(r&&!r.error){closeModal('ovArea');await loadAll();renderAreas();toast('Área guardada');}}
 function openEmpresa(id){editingId.empresa=id||null;document.getElementById('mEmpresaTitle').textContent=id?'Editar empresa':'Nueva empresa';['emNombre','emRUC','emContacto','emTel','emDir'].forEach(f=>sv(f,''));if(id){const e=cache.empresas.find(x=>x.id==id);if(e){sv('emNombre',e.nombre);sv('emRUC',e.ruc||'');sv('emContacto',e.contacto||'');sv('emTel',e.tel||'');sv('emDir',e.direccion||'');}}openModal('ovEmpresa');}
@@ -1954,7 +1956,7 @@ function verFicha(id) {
         <tr><td style="color:var(--text2);padding:5px 0;padding-right:12px">DUI:</td><td style="font-weight:500">${f.dui||'—'}</td></tr>
         <tr><td style="color:var(--text2);padding:5px 0">Cargo:</td><td>${f.cargo||f.cargoPre||'—'}</td></tr>
         <tr><td style="color:var(--text2);padding:5px 0">Correo:</td><td>${f.correo||'—'}</td></tr>
-        <tr><td style="color:var(--text2);padding:5px 0">Teléfono:</td><td>${f.telefono||'—'}</td></tr>
+        <tr><td style="color:var(--text2);padding:5px 0">Teléfono:</td><td>${f.telefono||'—'}${f.tipoTelefono?` <span class="badge badge-${f.tipoTelefono==='corporativo'?'blue':'purple'}" style="font-size:10px">${f.tipoTelefono==='corporativo'?'📱 Corporativo':'🏠 Personal'}</span>`:''}</td></tr>
         <tr><td style="color:var(--text2);padding:5px 0">Empresa:</td><td>${f.empresa||empN(f.empresaId)}</td></tr>
       </tbody></table>
     </div>
@@ -1983,6 +1985,7 @@ async function aprobarFicha(id, f) {
     cargo: f.cargo || f.cargoPre || '',
     correo: f.correo || '',
     telefono: f.telefono || '',
+    tipoTelefono: f.tipoTelefono || '',
     empresaId: f.empresaId || null
   });
   if (r && r.ok) {
