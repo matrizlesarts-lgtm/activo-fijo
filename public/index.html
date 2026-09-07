@@ -802,7 +802,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <script>
 let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[]};
 let gfModoActivo='existente';
-let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;let licVencs=[];
+let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;let licVencs=[];let currentPage='dashboard';
 
 async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json'},credentials:'include'};
@@ -868,6 +868,7 @@ async function navigate(page){
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
   document.getElementById('pageTitle').textContent=TITLES[page]||page;
   localStorage.setItem('lastPage',page);
+  currentPage=page;
   await loadAll();
   renderPage(page);
   restoreSubPage('page-'+page);
@@ -996,6 +997,7 @@ function setGlobalCompany(v){
   const b=document.getElementById('companyBadge');
   if(v){const em=cache.empresas.find(e=>String(e.id)===v);b.textContent=em?'🏢 '+em.nombre:'';b.style.display='';}
   else b.style.display='none';
+  renderPage(currentPage);
 }
 
 const empN=id=>(cache.empresas.find(x=>x.id==id)||{}).nombre||'-';
@@ -1042,24 +1044,30 @@ const v=id=>(document.getElementById(id)||{}).value||'';
 const sv=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
 
 async function renderDashboard(){
-  const s=await GET('stats');if(!s)return;
+  const actList=cache.activos.filter(a=>!globalEmp||!a.empresaId||String(a.empresaId)===globalEmp);
+  const equiposList=cache.equipos.filter(e=>!globalEmp||!e.empresaId||String(e.empresaId)===globalEmp);
+  const licList=cache.licencias.filter(l=>!globalEmp||!l.empresaId||String(l.empresaId)===globalEmp);
+  const historialList=cache.historial.filter(h=>!globalEmp||!h.empresaId||String(h.empresaId)===globalEmp);
+  const activosActivos=actList.filter(a=>a.estado==='activo');
+  const asignadosCount=activosActivos.filter(a=>asigActual(a.id)).length;
+  const s={total:actList.length,bodega:activosActivos.length-asignadosCount};
   const hoy=new Date();const en30=new Date();en30.setDate(en30.getDate()+30);
-  const licsVencer=cache.licencias.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<=en30&&new Date(l.fechaVenc)>=hoy);
-  const licsVencidas=cache.licencias.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<hoy);
-  const eqDisp=cache.equipos.filter(e=>e.estado==='disponible').length;
-  const eqAsig=cache.equipos.filter(e=>e.estado==='asignado').length;
+  const licsVencer=licList.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<=en30&&new Date(l.fechaVenc)>=hoy);
+  const licsVencidas=licList.filter(l=>l.fechaVenc&&new Date(l.fechaVenc)<hoy);
+  const eqDisp=equiposList.filter(e=>e.estado==='disponible').length;
+  const eqAsig=equiposList.filter(e=>e.estado==='asignado').length;
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg)">📦</div><div><div class="stat-label">Total activos</div><div class="stat-value">${s.total}</div><div class="stat-sub">registrados</div></div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">💻</div><div><div class="stat-label">Equipos disponibles</div><div class="stat-value">${eqDisp}</div><div class="stat-sub">${eqAsig} asignados</div></div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:var(--purple-bg)">🔑</div><div><div class="stat-label">Licencias activas</div><div class="stat-value">${cache.licencias.filter(l=>!l.fechaVenc||new Date(l.fechaVenc)>=hoy).length}</div><div class="stat-sub">${licsVencer.length} por vencer</div></div></div>
+    <div class="stat-card"><div class="stat-icon" style="background:var(--purple-bg)">🔑</div><div><div class="stat-label">Licencias activas</div><div class="stat-value">${licList.filter(l=>!l.fechaVenc||new Date(l.fechaVenc)>=hoy).length}</div><div class="stat-sub">${licsVencer.length} por vencer</div></div></div>
     <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🏪</div><div><div class="stat-label">En bodega</div><div class="stat-value">${s.bodega}</div><div class="stat-sub">sin asignar</div></div></div>`;
-  const ult=cache.historial.slice(-5).reverse();
+  const ult=historialList.slice(-5).reverse();
   document.getElementById('dash-actividad').innerHTML=ult.length?ult.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between">${tipoBadge(h.tipo)}<span style="font-size:11px;color:var(--text3)">${h.fecha}</span></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin actividad</div>';
   document.getElementById('dash-licencias').innerHTML=[...licsVencidas.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>🔑 ${l.nombre}</span>${badge('vencida','red')}</div>`),
     ...licsVencer.map(l=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>🔑 ${l.nombre}</span><span style="color:var(--amber);font-size:12px">${l.fechaVenc}</span></div>`)].join('')||'<div class="empty"><div class="empty-icon">✅</div>Todas las licencias al día</div>';
-  const aC={};cache.equipos.forEach(e=>{if(e.areaId){const n=areaN(e.areaId);aC[n]=(aC[n]||0)+1;}});
+  const aC={};equiposList.forEach(e=>{if(e.areaId){const n=areaN(e.areaId);aC[n]=(aC[n]||0)+1;}});
   document.getElementById('dash-areas').innerHTML=Object.entries(aC).length?Object.entries(aC).map(([a,n])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>🏬 ${a}</span><span style="font-weight:600">${n}</span></div>`).join(''):'<div class="empty"><div class="empty-icon">🏬</div>Sin equipos por área</div>';
-  const cC={};cache.activos.filter(a=>a.estado==='activo').forEach(a=>{const c=catN(a.categoriaId);cC[c]=(cC[c]||0)+1;});
+  const cC={};activosActivos.forEach(a=>{const c=catN(a.categoriaId);cC[c]=(cC[c]||0)+1;});
   document.getElementById('dash-cat').innerHTML=Object.entries(cC).length?Object.entries(cC).map(([c,n])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span>📦 ${c}</span><span style="font-weight:600">${n}</span></div>`).join(''):'<div class="empty"><div class="empty-icon">📦</div>Sin activos</div>';
 }
 
@@ -1205,13 +1213,17 @@ function renderBodega(){
   const list=cache.activos.filter(a=>a.estado==='activo'&&!asigActual(a.id)&&(!globalEmp||!a.empresaId||String(a.empresaId)===globalEmp));
   document.getElementById('tbBodega').innerHTML=list.length?list.map(a=>`<tr><td><span class="mono">${a.codigo}</span></td><td>${a.descripcion}</td><td>${catN(a.categoriaId)}</td><td>${empN(a.empresaId)}</td><td>${badge(a.condicion)}</td><td>$${(a.costo||0).toFixed(2)}</td><td><button class="btn btn-sm btn-success" onclick="openAsignacion(${a.id})" title="Asignar este activo a un empleado">Asignar →</button></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏪</div>Bodega vacía</div></td></tr>';
 }
-function renderBajas(){document.getElementById('tbBajas').innerHTML=cache.bajas.length?cache.bajas.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})" title="Eliminar baja">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';}
+function renderBajas(){
+  const list=cache.bajas.filter(b=>{if(!globalEmp)return true;const a=cache.activos.find(x=>x.id==b.activoId);return !a||!a.empresaId||String(a.empresaId)===globalEmp;});
+  document.getElementById('tbBajas').innerHTML=list.length?list.map(b=>`<tr><td>${actC(b.activoId)}</td><td>${badge(b.tipo,'red')}</td><td>${b.fecha}</td><td>${b.motivo||'—'}</td><td>${b.autorizado||'—'}</td><td><button class="btn btn-sm btn-danger" onclick="delRecord('bajas',${b.id})" title="Eliminar baja">🗑</button></td></tr>`).join(''):'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🗑️</div>Sin bajas</div></td></tr>';
+}
 function renderEmpleados(){
   const list=cache.empleados.filter(e=>!globalEmp||!e.empresaId||String(e.empresaId)===globalEmp);
   document.getElementById('tbEmp').innerHTML=list.map(e=>{const n=cache.asignaciones.filter(a=>a.empleadoId==e.id&&a.estado==='activo').length;const telCell=e.telefono?`${e.telefono}${e.tipoTelefono?` <span class="badge badge-${e.tipoTelefono==='corporativo'?'blue':'purple'}" style="font-size:10px">${e.tipoTelefono==='corporativo'?'📱':'🏠'}</span>`:''}`:'-';return`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${e.nombre.split(' ').slice(0,2).map(x=>x[0]).join('')}</div><span style="font-weight:500">${e.nombre}</span></div></td><td>${e.cargo}</td><td>${e.correo||'-'}</td><td>${telCell}</td><td>${areaN(e.areaId)}</td><td>${empN(e.empresaId)}</td><td>${n}</td><td>${badge(e.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="verExpediente(${e.id})" title="Ver historial completo de activos del empleado">Expediente</button><button class="btn btn-sm" onclick="openEmpleado(${e.id})">Editar</button><button class="btn btn-sm" onclick="duplicarEmpleado(${e.id})" title="Duplicar empleado">⧉</button><button class="btn btn-sm btn-danger" onclick="delRecord('empleados',${e.id})" title="Eliminar empleado">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="9"><div class="empty"><div class="empty-icon">👥</div>Sin empleados</div></td></tr>';
 }
 function renderAreas(){
-  document.getElementById('tbAreas').innerHTML=cache.areas.map(a=>{const eq=cache.equipos.filter(x=>x.areaId==a.id).length,ac=cache.activos.filter(x=>x.areaId==a.id).length;return`<tr><td><span style="font-weight:500">${a.nombre}</span></td><td>${empN(a.empresaId)}</td><td>${a.responsable?empNm(a.responsable):'—'}</td><td>${eq}</td><td>${ac}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openArea(${a.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('areas',${a.id})" title="Eliminar área">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏬</div>Sin áreas</div></td></tr>';
+  const list=cache.areas.filter(a=>!globalEmp||!a.empresaId||String(a.empresaId)===globalEmp);
+  document.getElementById('tbAreas').innerHTML=list.map(a=>{const eq=cache.equipos.filter(x=>x.areaId==a.id).length,ac=cache.activos.filter(x=>x.areaId==a.id).length;return`<tr><td><span style="font-weight:500">${a.nombre}</span></td><td>${empN(a.empresaId)}</td><td>${a.responsable?empNm(a.responsable):'—'}</td><td>${eq}</td><td>${ac}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openArea(${a.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('areas',${a.id})" title="Eliminar área">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏬</div>Sin áreas</div></td></tr>';
 }
 function renderEmpresas(){
   document.getElementById('tbEmpresas').innerHTML=cache.empresas.map(e=>{const p=cache.activos.filter(a=>a.empresaId==e.id).length,u=cache.asignaciones.filter(a=>a.empresaUsoId==e.id&&a.estado==='activo').length;return`<tr><td><span style="font-weight:500">${e.nombre}</span></td><td><span class="mono">${e.ruc||'—'}</span></td><td>${e.contacto||'—'}</td><td>${p}</td><td>${u}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openEmpresa(${e.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('empresas',${e.id})" title="Eliminar empresa">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">🏢</div>Sin empresas</div></td></tr>';
@@ -1240,14 +1252,14 @@ function renderAsignaciones(){
 }
 function renderHistorial(){
   const fT=v('fHistTipo');
-  const list=[...cache.historial].reverse().filter(h=>!fT||h.tipo===fT);
+  const list=[...cache.historial].reverse().filter(h=>(!fT||h.tipo===fT)&&(!globalEmp||!h.empresaId||String(h.empresaId)===globalEmp));
   document.getElementById('historialList').innerHTML=list.length?list.map(h=>`<div class="history-item"><div class="h-dot" style="background:${HCOL[h.tipo]||'#888'}"></div><div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:center">${tipoBadge(h.tipo)}<div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:var(--text3)">${h.fecha}</span><button class="btn btn-sm btn-danger" onclick="delRecord('historial',${h.id})" title="Eliminar registro" style="padding:2px 8px;font-size:11px">🗑</button></div></div><div style="font-size:13px;color:var(--text2);margin-top:2px">${h.descripcion}</div></div></div>`).join(''):'<div class="empty"><div class="empty-icon">📋</div>Sin historial</div>';
 }
 function renderDepr(){
-  const list=cache.activos.filter(a=>a.estado==='activo'&&a.costo&&a.vidaUtil);
+  const list=cache.activos.filter(a=>a.estado==='activo'&&a.costo&&a.vidaUtil&&(!globalEmp||!a.empresaId||String(a.empresaId)===globalEmp));
   document.getElementById('tbDepr').innerHTML=list.map(a=>{const vu=a.vidaUtil||5,da=(a.costo||0)/vu,anos=a.fechaCompra?(new Date()-new Date(a.fechaCompra))/(365.25*24*3600*1000):0,dt=Math.min(anos*da,a.costo||0),va=Math.max((a.costo||0)-dt,0),pct=Math.min((dt/(a.costo||1))*100,100),col=pct>80?'var(--red)':pct>50?'var(--amber)':'var(--green)';return`<tr><td><span class="mono">${a.codigo}</span><br><span style="font-size:11px;color:var(--text2)">${a.descripcion}</span></td><td>${catN(a.categoriaId)}</td><td>$${(a.costo||0).toFixed(2)}</td><td>${vu}a</td><td>$${da.toFixed(2)}</td><td style="font-weight:600">$${va.toFixed(2)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="depr-bar"><div class="depr-fill" style="width:${pct.toFixed(0)}%;background:${col}"></div></div><span style="font-size:12px">${pct.toFixed(0)}%</span></div></td><td><button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})" title="Eliminar activo permanentemente">🗑</button></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">📉</div>Sin datos</div></td></tr>';
 }
-function renderUsuarios(){document.getElementById('tbUsuarios').innerHTML=cache.usuarios.map(u=>`<tr><td><span class="mono">${u.usuario}</span></td><td>${u.nombre||'—'}</td><td>${badge(u.rol,'purple')}</td><td>${u.empresaId?empN(u.empresaId):'Todas'}</td><td>${badge(u.estado||'activo')}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})" title="Eliminar usuario">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">Sin usuarios</div></td></tr>';}
+function renderUsuarios(){const list=cache.usuarios.filter(u=>!globalEmp||!u.empresaId||String(u.empresaId)===globalEmp);document.getElementById('tbUsuarios').innerHTML=list.map(u=>`<tr><td><span class="mono">${u.usuario}</span></td><td>${u.nombre||'—'}</td><td>${badge(u.rol,'purple')}</td><td>${u.empresaId?empN(u.empresaId):'Todas'}</td><td>${badge(u.estado||'activo')}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openUsuario(${u.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('usuarios',${u.id})" title="Eliminar usuario">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">Sin usuarios</div></td></tr>';}
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -1774,8 +1786,9 @@ function printLicencias(){
 }
 
 function renderTraslados(){
-  document.getElementById('tbTraslados').innerHTML=cache.traslados.length
-    ?cache.traslados.map(t=>`<tr>
+  const list=cache.traslados.filter(t=>!globalEmp||!t.empresaDestinoId||String(t.empresaDestinoId)===globalEmp);
+  document.getElementById('tbTraslados').innerHTML=list.length
+    ?list.map(t=>`<tr>
       <td>${actC(t.activoId)}</td>
       <td>${t.deEmpleadoId?empNm(t.deEmpleadoId):'—'}</td>
       <td>${empNm(t.aEmpleadoId)}</td>
@@ -1844,7 +1857,7 @@ let currentFichaId = null;
 let currentEnlaceUrl = '';
 
 function renderFichas() {
-  const list = cache.fichas || [];
+  const list = (cache.fichas || []).filter(f=>!globalEmp||!f.empresaId||String(f.empresaId)===globalEmp);
   const STATUS = { pendiente:'🕐 Pendiente', completada:'📋 Completada', aprobada:'✅ Aprobada', rechazada:'❌ Rechazada' };
   const CLS = { pendiente:'gray', completada:'amber', aprobada:'green', rechazada:'red' };
   document.getElementById('tbFichas').innerHTML = list.length
