@@ -32,7 +32,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .btn-login:hover{background:var(--blue-dark)}
 #app{display:none;height:100vh;overflow:hidden}
 #app.show{display:flex}
-.sidebar{width:240px;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar{width:240px;background:#1e1e2e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;transition:width .18s ease;position:relative}
+.sidebar.collapsed{width:64px}
+.sidebar.collapsed .brand-name,.sidebar.collapsed .brand-sub,.sidebar.collapsed .company-wrap,.sidebar.collapsed .nav-section,.sidebar.collapsed .nav-label,.sidebar.collapsed .user-row>div:not(.user-av),.sidebar.collapsed .btn-logout{display:none}
+.sidebar.collapsed .sidebar-brand{justify-content:center;padding:24px 0 16px}
+.sidebar.collapsed .nav-item{justify-content:center;padding:9px 0}
+.sidebar.collapsed .nav-item.active::before{display:none}
+.sidebar.collapsed .user-row{justify-content:center;margin-bottom:0}
+.sidebar-toggle-btn{position:absolute;top:20px;right:-13px;width:26px;height:26px;background:var(--blue);border:2px solid #1e1e2e;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;z-index:5;transition:transform .18s ease}
+.sidebar.collapsed .sidebar-toggle-btn{transform:rotate(180deg)}
+.sidebar-pin-row{padding:8px 20px;display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,.4);cursor:pointer;user-select:none}
+.sidebar.collapsed .sidebar-pin-row{display:none}
+.sidebar-pin-row input{cursor:pointer}
 .sidebar-brand{padding:24px 20px 16px;display:flex;align-items:center;gap:12px}
 .brand-icon{width:36px;height:36px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .brand-name{font-size:16px;font-weight:700;color:#fff}.brand-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px}
@@ -157,11 +168,13 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 </div>
 
 <div id="app">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Ocultar/mostrar menú">◀</div>
     <div class="sidebar-brand">
       <div class="brand-icon">🖥️</div>
       <div><div class="brand-name">AssetPro</div><div class="brand-sub">Gestión de activos</div></div>
     </div>
+    <label class="sidebar-pin-row"><input type="checkbox" id="sidebarPinChk" onchange="setSidebarPin(this.checked)"> Dejar menú fijo (siempre abierto)</label>
     <div class="company-wrap">
       <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:5px">Empresa activa</div>
       <select id="globalCompany" onchange="setGlobalCompany(this.value)" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:12px;font-family:inherit;cursor:pointer">
@@ -170,14 +183,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     </div>
     <nav>
       <div class="nav-section">Principal</div>
-      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item active" data-page="dashboard" title="Dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></div>
       <div class="nav-section">Módulos</div>
-      <div class="nav-item" data-page="tecnologia"><span class="nav-icon">💻</span>Tecnología</div>
-      <div class="nav-item" data-page="inventario"><span class="nav-icon">📦</span>Inventario</div>
-      <div class="nav-item" data-page="catalogos"><span class="nav-icon">◈</span>Catálogos</div>
-      <div class="nav-item" data-page="reportes"><span class="nav-icon">📋</span>Reportes</div>
+      <div class="nav-item" data-page="tecnologia" title="Tecnología"><span class="nav-icon">💻</span><span class="nav-label">Tecnología</span></div>
+      <div class="nav-item" data-page="inventario" title="Inventario"><span class="nav-icon">📦</span><span class="nav-label">Inventario</span></div>
+      <div class="nav-item" data-page="catalogos" title="Catálogos"><span class="nav-icon">◈</span><span class="nav-label">Catálogos</span></div>
+      <div class="nav-item" data-page="reportes" title="Reportes"><span class="nav-icon">📋</span><span class="nav-label">Reportes</span></div>
       <div class="nav-section">Sistema</div>
-      <div class="nav-item" data-page="sistema"><span class="nav-icon">⚙️</span>Sistema</div>
+      <div class="nav-item" data-page="sistema" title="Sistema"><span class="nav-icon">⚙️</span><span class="nav-label">Sistema</span></div>
     </nav>
     <div class="sidebar-footer">
       <div class="user-row">
@@ -849,7 +862,37 @@ const MODALES_FORM=['ovEquipo','ovLicencia','ovActivo','ovAsig','ovBaja','ovEmp'
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
   document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModalSafe(ov.id);}));
+  initSidebarPref();
 });
+function initSidebarPref(){
+  const sb=document.getElementById('sidebar');
+  const pinChk=document.getElementById('sidebarPinChk');
+  const pinned=localStorage.getItem('sidebarPinned')==='1';
+  const collapsed=localStorage.getItem('sidebarCollapsed')==='1';
+  if(pinChk)pinChk.checked=pinned;
+  if(pinned){
+    sb.classList.remove('collapsed');
+  }else if(collapsed){
+    sb.classList.add('collapsed');
+  }
+}
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  if(localStorage.getItem('sidebarPinned')==='1'){
+    toast('El menú está fijo. Desmarca "Dejar menú fijo" para poder ocultarlo.','info');
+    return;
+  }
+  sb.classList.toggle('collapsed');
+  localStorage.setItem('sidebarCollapsed',sb.classList.contains('collapsed')?'1':'0');
+}
+function setSidebarPin(checked){
+  localStorage.setItem('sidebarPinned',checked?'1':'0');
+  const sb=document.getElementById('sidebar');
+  if(checked){
+    sb.classList.remove('collapsed');
+    localStorage.setItem('sidebarCollapsed','0');
+  }
+}
 function closeModalSafe(id){
   const esFormulario=MODALES_FORM.includes(id);
   if(esFormulario){
