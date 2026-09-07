@@ -265,7 +265,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       </div>
       <button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button>
     </div>
-    <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px"></div>
+    <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px"></div>
 
     <div id="licView-cards" class="lic-subview active">
       <div class="search-row">
@@ -1168,10 +1168,22 @@ function renderLicencias(){
     const dias=Math.ceil((new Date(l.fechaVenc)-hoy)/(1000*60*60*24));
     return dias>=0&&dias<=7;
   });
+  // Monto del mes vigente: suma el costo de cada licencia mensual/anual que tiene un ciclo
+  // de pago cayendo dentro del mes calendario actual (usando la proyeccion real de ciclos)
+  const primerDiaMes=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().slice(0,10);
+  const ultimoDiaMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).toISOString().slice(0,10);
+  const nombreMes=hoy.toLocaleDateString('es',{month:'long',year:'numeric'});
+  const montoMesVigente=baseSet.reduce((sum,l)=>{
+    if(l.tipo==='perpetua')return sum;
+    const entradas=proyectarEntradasLicencia(l,primerDiaMes,ultimoDiaMes);
+    const tieneEsteMes=entradas.some(e=>e.fecha&&e.fecha>=primerDiaMes&&e.fecha<=ultimoDiaMes);
+    return tieneEsteMes?sum+(parseFloat(l.costo)||0):sum;
+  },0);
   const statsEl=document.getElementById('licStatsGrid');
   if(statsEl){
     statsEl.innerHTML=`
       <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">💰</div><div><div class="stat-label">Monto activo en licencias</div><div class="stat-value">$${montoActivo.toFixed(2)}</div><div class="stat-sub">suma de licencias no vencidas</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg)">📅</div><div><div class="stat-label">Monto del mes vigente</div><div class="stat-value">$${montoMesVigente.toFixed(2)}</div><div class="stat-sub">a pagar en ${nombreMes}</div></div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--red-bg,#fee2e2)">⛔</div><div><div class="stat-label">Licencias vencidas</div><div class="stat-value">${vencidas.length}</div><div class="stat-sub">requieren renovación</div></div></div>
       <div class="stat-card" style="${alertaSemana.length?'border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)':''}"><div class="stat-icon" style="background:var(--amber-bg)">🔔</div><div><div class="stat-label">Vencen esta semana</div><div class="stat-value">${alertaSemana.length}</div><div class="stat-sub">en los próximos 7 días</div></div></div>`;
   }
