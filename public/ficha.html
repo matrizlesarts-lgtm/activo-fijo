@@ -140,6 +140,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135d
         <div class="fgroup">
           <label>Teléfono / WhatsApp <span class="req">*</span></label>
           <input id="fTelefono" type="tel" placeholder="0000-0000">
+          <div id="fTipoTelGroup" style="display:flex;gap:16px;margin-top:8px;font-size:13px;color:#374151">
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400;cursor:pointer"><input type="radio" name="fTipoTel" value="corporativo" style="width:auto;cursor:pointer"> Es un número corporativo</label>
+            <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:400;cursor:pointer"><input type="radio" name="fTipoTel" value="personal" style="width:auto;cursor:pointer"> Es mi número personal</label>
+          </div>
         </div>
       </div>
 
@@ -283,6 +287,8 @@ async function enviarFicha() {
   const correo = document.getElementById('fCorreo').value.trim();
   const tel    = document.getElementById('fTelefono').value.trim();
   const cargo  = document.getElementById('fCargo').value.trim();
+  const tipoTelRadio = document.querySelector('input[name="fTipoTel"]:checked');
+  const tipoTel = tipoTelRadio ? tipoTelRadio.value : '';
 
   // Validar campos requeridos
   let ok = true;
@@ -291,8 +297,11 @@ async function enviarFicha() {
     if (!val) { el.classList.add('error'); ok = false; }
     else el.classList.remove('error');
   });
+  const tipoTelGroup = document.getElementById('fTipoTelGroup');
+  if (!tipoTel) { tipoTelGroup.style.color = '#dc2626'; ok = false; }
+  else tipoTelGroup.style.color = '#374151';
 
-  if (!ok) { alert('Por favor completa todos los campos obligatorios.'); return; }
+  if (!ok) { alert('Por favor completa todos los campos obligatorios, incluyendo si el número es corporativo o personal.'); return; }
 
   const btn = document.getElementById('btnEnviar');
   btn.disabled = true;
@@ -304,6 +313,7 @@ async function enviarFicha() {
     dui,
     correo,
     telefono: tel,
+    tipoTelefono: tipoTel,
     cargo,
     nacimiento:        document.getElementById('fNacimiento').value,
     genero:            document.getElementById('fGenero').value,
