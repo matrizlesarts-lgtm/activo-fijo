@@ -19,7 +19,11 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e1e2e 0%,#2952cc 100%)}
+#loginScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e1e2e 0%,#2952cc 100%)}
+#loginScreen.show{display:flex}
+#bootLoader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1e1e2e 0%,#2952cc 100%);z-index:9999}
+.boot-spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:bootspin .8s linear infinite}
+@keyframes bootspin{to{transform:rotate(360deg)}}
 .login-box{background:#fff;border-radius:var(--radius-xl);padding:48px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
 .login-brand{text-align:center;margin-bottom:32px}
 .login-brand .icon{width:56px;height:56px;background:var(--blue-bg);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px}
@@ -155,6 +159,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 </style>
 </head>
 <body>
+<div id="bootLoader"><div class="boot-spinner"></div></div>
 <div id="loginScreen">
   <div class="login-box">
     <div class="login-brand">
@@ -839,9 +844,10 @@ async function doLogout(){
   document.cookie='session=; Max-Age=0; Path=/';
   showLogin();
 }
-function showLogin(){document.getElementById('loginScreen').style.display='flex';document.getElementById('app').classList.remove('show');}
+function showLogin(){const bl=document.getElementById('bootLoader');if(bl)bl.style.display='none';document.getElementById('loginScreen').classList.add('show');document.getElementById('app').classList.remove('show');}
 function showApp(){
-  document.getElementById('loginScreen').style.display='none';
+  const bl=document.getElementById('bootLoader');if(bl)bl.style.display='none';
+  document.getElementById('loginScreen').classList.remove('show');
   document.getElementById('app').classList.add('show');
   document.getElementById('sidebarUser').textContent=currentUser.nombre||currentUser.usuario;
   document.getElementById('sidebarRol').textContent=currentUser.rol;
