@@ -262,6 +262,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div style="display:flex;gap:6px">
         <button class="btn btn-sm lic-view-btn active" id="licViewBtnCards" onclick="switchLicView('cards')">🔑 Licencias</button>
         <button class="btn btn-sm lic-view-btn" id="licViewBtnPersonas" onclick="switchLicView('personas')">👤 Por persona</button>
+        <button class="btn btn-sm lic-view-btn" id="licViewBtnPresupuesto" onclick="switchLicView('presupuesto')">📊 Presupuesto mensual</button>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openLicencia()">+ Nueva licencia</button>
     </div>
@@ -328,6 +329,22 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <th class="sortable-th" onclick="sortLicPersonas('costo')">Costo <span id="sortIc-costo"></span></th>
         <th>Acciones</th>
       </tr></thead><tbody id="tbLicPorPersona"></tbody></table></div>
+    </div>
+
+    <div id="licView-presupuesto" class="lic-subview" style="display:none">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;font-size:13px;color:var(--text2)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>📅 Rango de fechas:</span>
+          <input type="date" id="licPresDesde" onchange="renderLicPresupuesto()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit">
+          <span>a</span>
+          <input type="date" id="licPresHasta" onchange="renderLicPresupuesto()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit">
+          <button class="btn btn-sm" onclick="setLicPresRangoAnioActual()">Este año</button>
+        </div>
+      </div>
+      <div class="stats-grid" id="licPresStatsGrid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px"></div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Licencia</th><th>Persona</th><th>Empresa</th><th>Fecha</th><th>Costo</th><th>Pago</th>
+      </tr></thead><tbody id="tbLicPresupuesto"></tbody></table></div>
     </div>
   </div>
 
@@ -1428,9 +1445,86 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 function switchLicView(which){
   document.getElementById('licViewBtnCards').classList.toggle('active',which==='cards');
   document.getElementById('licViewBtnPersonas').classList.toggle('active',which==='personas');
+  document.getElementById('licViewBtnPresupuesto').classList.toggle('active',which==='presupuesto');
   document.getElementById('licView-cards').style.display=which==='cards'?'block':'none';
   document.getElementById('licView-personas').style.display=which==='personas'?'block':'none';
+  document.getElementById('licView-presupuesto').style.display=which==='presupuesto'?'block':'none';
   if(which==='personas')renderLicPorPersona();
+  if(which==='presupuesto')renderLicPresupuesto();
+}
+function setLicPresRangoAnioActual(){
+  const y=new Date().getFullYear();
+  sv('licPresDesde',y+'-01-01');
+  sv('licPresHasta',y+'-12-31');
+  renderLicPresupuesto();
+}
+function mesNombreCorto(k){
+  const[y,m]=k.split('-');
+  const nombres=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return nombres[parseInt(m)-1]+' '+y;
+}
+function renderLicPresupuesto(){
+  const tbody=document.getElementById('tbLicPresupuesto');
+  if(!tbody)return;
+  const baseSet=cache.licencias.filter(l=>!globalEmp||!l.empresaId||String(l.empresaId)===globalEmp);
+  let desde=v('licPresDesde'),hasta=v('licPresHasta');
+  if(!desde&&!hasta){
+    const y=new Date().getFullYear();
+    desde=y+'-01-01';hasta=y+'-12-31';
+    sv('licPresDesde',desde);sv('licPresHasta',hasta);
+  }
+  const meses={};
+  baseSet.forEach(l=>{
+    const emp=l.empleadoId?cache.empleados.find(x=>x.id==l.empleadoId):null;
+    const entradas=proyectarEntradasLicencia(l,desde,hasta);
+    entradas.forEach(ve=>{
+      if(!ve.fecha)return;
+      if(desde&&ve.fecha<desde)return;
+      if(hasta&&ve.fecha>hasta)return;
+      const mesKey=ve.fecha.slice(0,7);
+      const costo=(ve.costo!==undefined&&ve.costo!==null&&ve.costo!=='')?parseFloat(ve.costo)||0:(parseFloat(l.costo)||0);
+      if(!meses[mesKey])meses[mesKey]={items:[],monto:0,pendiente:0};
+      meses[mesKey].items.push({
+        licencia:l.nombre+(l.vendor?' ('+l.vendor+')':''),
+        persona:emp?emp.nombre:'Sin asignar',
+        empresa:empN(l.empresaId),
+        fecha:ve.fecha,
+        costo,
+        pagoBool:!!ve.pagado
+      });
+      meses[mesKey].monto+=costo;
+      if(!ve.pagado)meses[mesKey].pendiente+=costo;
+    });
+  });
+  const mesKeys=Object.keys(meses).sort();
+  const totalPeriodo=mesKeys.reduce((s,k)=>s+meses[k].monto,0);
+  const promedioMensual=mesKeys.length?totalPeriodo/mesKeys.length:0;
+  let mesMax='-',montoMax=0;
+  mesKeys.forEach(k=>{if(meses[k].monto>montoMax){montoMax=meses[k].monto;mesMax=k;}});
+  const statsEl=document.getElementById('licPresStatsGrid');
+  if(statsEl){
+    statsEl.innerHTML=`
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg)">💵</div><div><div class="stat-label">Total del período</div><div class="stat-value">$${totalPeriodo.toFixed(2)}</div><div class="stat-sub">${desde} a ${hasta}</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--green-bg)">📈</div><div><div class="stat-label">Promedio mensual</div><div class="stat-value">$${promedioMensual.toFixed(2)}</div><div class="stat-sub">sobre ${mesKeys.length} mes${mesKeys.length===1?'':'es'} con gasto</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--amber-bg)">🔝</div><div><div class="stat-label">Mes con mayor gasto</div><div class="stat-value">${mesMax!=='-'?mesNombreCorto(mesMax):'-'}</div><div class="stat-sub">${mesMax!=='-'?'$'+montoMax.toFixed(2):''}</div></div></div>`;
+  }
+  if(!mesKeys.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3)">Sin gastos en el rango seleccionado</td></tr>';return;}
+  let html='';
+  mesKeys.forEach(k=>{
+    const g=meses[k];
+    html+=`<tr style="background:var(--bg2)"><td colspan="6" style="font-weight:600">📅 ${mesNombreCorto(k)} <span style="font-weight:400;color:var(--text3);font-size:12px">· ${g.items.length} pago${g.items.length===1?'':'s'} · $${g.monto.toFixed(2)} total${g.pendiente>0?' · $'+g.pendiente.toFixed(2)+' pendiente de pago':''}</span></td></tr>`;
+    g.items.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).forEach(it=>{
+      html+=`<tr>
+        <td>${it.licencia}</td>
+        <td>${it.persona}</td>
+        <td>${it.empresa}</td>
+        <td>${it.fecha}</td>
+        <td>$${it.costo.toFixed(2)}</td>
+        <td>${it.pagoBool?'✅ Pagada':'❌ No pagada'}</td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
 }
 let licFormato=localStorage.getItem('licFormato')||'cards';
 function switchLicFormat(which){
