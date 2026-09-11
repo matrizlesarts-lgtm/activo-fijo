@@ -413,7 +413,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // TABLAS CRUD
-    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos','duraciones'];
     if (TABLAS.includes(parts[1])) return crudHandler(parts[1], req, res, parts);
 
     // Generar ficha
