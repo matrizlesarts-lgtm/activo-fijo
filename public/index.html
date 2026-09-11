@@ -367,6 +367,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <button class="page-tab" onclick="switchPageTab(this,'sub-areas')">🏬 Áreas</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-empresas')">🏢 Empresas</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-bancos')">🏦 Bancos</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-duraciones')">⏳ Duraciones</button>
     </div>
   </div>
 
@@ -403,6 +404,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="card-header"><span class="card-title">🏦 Bancos</span><button class="btn btn-primary btn-sm" onclick="openBanco()">+ Nuevo</button></div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Bancos disponibles para asociar a los métodos de pago de las licencias.</p>
       <div class="table-wrap"><table><thead><tr><th>Banco</th><th>Licencias asociadas</th><th>Acciones</th></tr></thead><tbody id="tbBancos"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-duraciones" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">⏳ Duraciones de licencia</span><button class="btn btn-primary btn-sm" onclick="openDuracion()">+ Nueva</button></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Define cada cuántos años se renueva una licencia anual (ej. cada 1, 2 o 3 años), para que el sistema proyecte correctamente sus fechas de pago.</p>
+      <div class="table-wrap"><table><thead><tr><th>Duración</th><th>Años</th><th>Licencias asociadas</th><th>Acciones</th></tr></thead><tbody id="tbDuraciones"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -568,6 +577,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="modal-header"><span class="modal-title" id="mLicTitle">Nueva licencia</span><button class="modal-close" onclick="closeModalSafe('ovLicencia')">×</button></div>
     <div class="form-row"><div class="fgroup"><label>Nombre del software *</label><input id="licNombre" placeholder="Microsoft Office 365"></div><div class="fgroup"><label>Vendor</label><input id="licVendor" placeholder="Microsoft, Adobe..."></div></div>
     <div class="form-row"><div class="fgroup"><label>Tipo</label><select id="licTipo" onchange="calcVencLicencia()"><option value="perpetua">🔒 Perpetua</option><option value="mensual">📅 Mensual</option><option value="anual">📆 Anual</option></select></div><div class="fgroup"><label>Categoría</label><select id="licCategoria"><option value="productividad">Productividad</option><option value="seguridad">Seguridad</option><option value="diseno">Diseño</option><option value="desarrollo">Desarrollo</option><option value="comunicacion">Comunicación</option><option value="contabilidad">Contabilidad</option><option value="otro">Otro</option></select></div></div>
+    <div class="form-row" id="licDuracionRow" style="display:none"><div class="fgroup"><label>Duración (cada cuántos años se renueva)</label><select id="licDuracion" onchange="calcVencLicencia()"></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Clave / Serial</label><input id="licClave" placeholder="XXXXX-XXXXX-XXXXX"></div><div class="fgroup"><label>Seats (usuarios)</label><input id="licSeats" type="number" min="1" value="1"></div></div>
     <div class="form-row"><div class="fgroup"><label>Costo ($)</label><input id="licCosto" type="number" min="0" step="0.01"></div><div class="fgroup"><label>Empresa</label><select id="licEmpresa"></select></div></div>
     <div class="form-row"><div class="fgroup"><label>Fecha inicio</label><input id="licFechaInicio" type="date" oninput="calcVencLicencia()"></div><div class="fgroup"><label>Fecha vencimiento</label><input id="licFechaVenc" type="date"></div></div>
@@ -667,6 +677,15 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="modal-header"><span class="modal-title" id="mBancoTitle">Nuevo banco</span><button class="modal-close" onclick="closeModalSafe('ovBanco')">×</button></div>
     <div class="fgroup"><label>Nombre del banco *</label><input id="bcNombre" placeholder="Banco Agrícola"></div>
     <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovBanco')">Cancelar</button><button class="btn btn-primary" onclick="saveBanco()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovDuracion">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mDuracionTitle">Nueva duración</span><button class="modal-close" onclick="closeModalSafe('ovDuracion')">×</button></div>
+    <div class="fgroup"><label>Nombre *</label><input id="drNombre" placeholder="Ej. Cada 2 años / Bianual"></div>
+    <div class="fgroup"><label>Cada cuántos años se renueva *</label><input id="drAnios" type="number" min="1" step="1" placeholder="2"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovDuracion')">Cancelar</button><button class="btn btn-primary" onclick="saveDuracion()">Guardar</button></div>
   </div>
 </div>
 
@@ -803,7 +822,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="toast"></div>
 
 <script>
-let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[]};
+let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[],duraciones:[]};
 let gfModoActivo='existente';
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;let licVencs=[];let currentPage='dashboard';
 
@@ -884,7 +903,7 @@ function restoreSubPage(pageId){
   const btn=Array.from(pageEl.querySelectorAll('.page-tab')).find(b=>(b.getAttribute('onclick')||'').includes(paneId));
   if(btn)switchPageTab(btn,paneId);
 }
-const MODALES_FORM=['ovEquipo','ovLicencia','ovActivo','ovAsig','ovBaja','ovEmp','ovBanco','ovArea','ovEmpresa','ovCategoria','ovTraslado','ovUser'];
+const MODALES_FORM=['ovEquipo','ovLicencia','ovActivo','ovAsig','ovBaja','ovEmp','ovBanco','ovDuracion','ovArea','ovEmpresa','ovCategoria','ovTraslado','ovUser'];
 document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.addEventListener('click',()=>navigate(n.dataset.page)));
   document.querySelectorAll('.overlay').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov)closeModalSafe(ov.id);}));
@@ -1012,7 +1031,7 @@ function renderPage(p){
     dashboard: renderDashboard,
     tecnologia: ()=>{ renderEquipos(); renderLicencias(); renderAsignaciones(); },
     inventario: ()=>{ renderActivos(); renderBodega(); renderBajas(); },
-    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); },
+    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); renderDuraciones(); },
     reportes:   ()=>{ renderHistorial(); renderTraslados(); renderDepr(); populateReportSelects(); },
     sistema:    ()=>{ renderUsuarios(); renderFichas(); }
   };
@@ -1020,7 +1039,7 @@ function renderPage(p){
 }
 
 async function loadAll(){
-  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos'];
+  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos','duraciones'];
   const results=await Promise.all(keys.map(k=>GET(k)));
   keys.forEach((k,i)=>{if(results[i]&&Array.isArray(results[i]))cache[k]=results[i];});
   populateAllSelects();
@@ -1048,6 +1067,7 @@ const HCOL={alta:'#7c3aed',asignacion:'#16a34a',traslado:'#3b6ff0',devolucion:'#
 function sel(id,opts,empty){const el=document.getElementById(id);if(!el)return;const prev=el.value;el.innerHTML=(empty!==undefined?`<option value="">${empty}</option>`:'')+opts;if(prev)el.value=prev;}
 const empOpts=()=>cache.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
 const bancoOpts=()=>cache.bancos.map(b=>`<option value="${b.nombre}">${b.nombre}</option>`).join('');
+const duracionOpts=()=>cache.duraciones.map(d=>`<option value="${d.anios}">${d.nombre} (${d.anios} ${d.anios==1?'año':'años'})</option>`).join('');
 const catOpts=()=>cache.categorias.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 const empNmOpts=()=>cache.empleados.map(e=>`<option value="${e.id}">${e.nombre} — ${e.cargo}</option>`).join('');
 const areaOpts=()=>cache.areas.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('');
@@ -1065,7 +1085,7 @@ function populateAllSelects(){
   sel('arEmpresa',empOpts());sel('arResp',empNmOpts(),'Sin responsable');
   sel('asActivo',activoOpts());sel('asEmp',empNmOpts());sel('asEmpUso',empOpts());
   sel('baActivo',activoOpts());sel('uEmpresa',empOpts(),'Todas');
-  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('licBanco',bancoOpts(),'Sin especificar');sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
+  sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('licBanco',bancoOpts(),'Sin especificar');sel('licDuracion',duracionOpts(),'1 año (estándar)');sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
   populateReportSelects();
 }
 function populateReportSelects(){
@@ -1312,6 +1332,26 @@ async function saveBanco(){
   if(r&&!r.error){closeModal('ovBanco');await loadAll();renderBancos();populateAllSelects();toast('Banco guardado');}
   else toast('Error al guardar','warning');
 }
+function renderDuraciones(){
+  const el=document.getElementById('tbDuraciones'); if(!el) return;
+  el.innerHTML=cache.duraciones.map(d=>{const n=cache.licencias.filter(l=>l.tipo==='anual'&&(l.duracionAnios||1)==d.anios).length;return`<tr><td><span style="font-weight:500">⏳ ${d.nombre}</span></td><td>${d.anios} ${d.anios==1?'año':'años'}</td><td>${n}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openDuracion(${d.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('duraciones',${d.id})" title="Eliminar duración">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-icon">⏳</div>Sin duraciones registradas</div></td></tr>';
+}
+function openDuracion(id){
+  editingId.duracion=id||null;
+  document.getElementById('mDuracionTitle').textContent=id?'Editar duración':'Nueva duración';
+  sv('drNombre','');sv('drAnios','');
+  if(id){const d=cache.duraciones.find(x=>x.id==id);if(d){sv('drNombre',d.nombre);sv('drAnios',d.anios);}}
+  openModal('ovDuracion');
+}
+async function saveDuracion(){
+  const nombre=v('drNombre').trim();const anios=parseInt(v('drAnios'));
+  if(!nombre){toast('El nombre es requerido','warning');return;}
+  if(!anios||anios<1){toast('Indica cada cuántos años se renueva (mínimo 1)','warning');return;}
+  const data={nombre,anios};
+  const r=editingId.duracion?await PUT('duraciones/'+editingId.duracion,data):await POST('duraciones',data);
+  if(r&&!r.error){closeModal('ovDuracion');await loadAll();renderDuraciones();populateAllSelects();toast('Duración guardada');}
+  else toast('Error al guardar','warning');
+}
 function renderAsignaciones(){
   const list=cache.asignaciones.filter(a=>!globalEmp||!a.empresaUsoId||String(a.empresaUsoId)===globalEmp);
   document.getElementById('tbAsig').innerHTML=list.length?list.map(a=>`<tr><td>${actC(a.activoId)}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${empNm(a.empleadoId).slice(0,2).toUpperCase()}</div>${empNm(a.empleadoId)}</div></td><td>${empN(a.empresaUsoId)}</td><td>${a.fecha}</td><td>${badge(a.condicionEntrega)}</td><td>${badge(a.estado)}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="printHojaById(${a.id})" title="Imprimir hoja de entrega">🖨️</button>${a.estado==='activo'?`<button class="btn btn-sm btn-danger" onclick="devolverActivo(${a.id})" title="Registrar devolución del activo">Devolver</button>`:''}<button class="btn btn-sm btn-danger" onclick="eliminarAsignacion(${a.id})" title="Eliminar asignación">🗑</button></div></td></tr>`).join(''):'<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div>Sin asignaciones</div></td></tr>';
@@ -1423,10 +1463,11 @@ function proyectarEntradasLicencia(l,desde,hasta){
   guardadas.forEach(g=>{if(g.fecha)porFecha[g.fecha]=g;});
   // Genera todas las fechas periodicas desde 'base' hacia adelante:
   // - si hay 'hasta' explicito, se respeta
-  // - si hay 'desde' pero no 'hasta', proyecta 1 año adelante (para ver tambien futuras)
+  // - si hay 'desde' pero no 'hasta', proyecta 5 años adelante (para ver tambien futuras, incluso anuales de varios años)
   // - si NO hay ningun filtro, proyecta solo hasta hoy (las que ya han pasado y estan pendientes de marcar)
   let d=new Date(base+'T00:00:00');
-  const limite=hasta?new Date(hasta+'T00:00:00'):(desde?(()=>{const x=new Date();x.setFullYear(x.getFullYear()+1);return x;})():new Date());
+  const limite=hasta?new Date(hasta+'T00:00:00'):(desde?(()=>{const x=new Date();x.setFullYear(x.getFullYear()+5);return x;})():new Date());
+  const anioDuracion=l.tipo==='anual'?(parseInt(l.duracionAnios)||1):1;
   let guard=0;
   while(d<=limite&&guard<600){
     const f=d.toISOString().slice(0,10);
@@ -1434,7 +1475,7 @@ function proyectarEntradasLicencia(l,desde,hasta){
       porFecha[f]={fecha:f,pagado:false,fechaPago:'',idx:'proy_'+f};
     }
     if(l.tipo==='mensual')d=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
-    else d=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+    else d=new Date(d.getFullYear()+anioDuracion,d.getMonth(),d.getDate());
     guard++;
   }
   return Object.values(porFecha);
@@ -1660,24 +1701,28 @@ function verDetalleEquipo(id){
 function calcVencLicencia(){
   const tipo=v('licTipo'),fi=v('licFechaInicio');
   const hint=document.getElementById('licVencAuto');
+  const durRow=document.getElementById('licDuracionRow');
+  if(durRow)durRow.style.display=(tipo==='anual')?'':'none';
   if(!fi||tipo==='perpetua'){if(hint)hint.textContent='';return;}
   const d=new Date(fi+'T00:00:00');
   let venc;
   if(tipo==='mensual')venc=new Date(d.getFullYear(),d.getMonth()+1,d.getDate());
-  else if(tipo==='anual')venc=new Date(d.getFullYear()+1,d.getMonth(),d.getDate());
+  else if(tipo==='anual'){const anios=parseInt(v('licDuracion'))||1;venc=new Date(d.getFullYear()+anios,d.getMonth(),d.getDate());}
   else{if(hint)hint.textContent='';return;}
   const yyyy=venc.getFullYear(),mm=String(venc.getMonth()+1).padStart(2,'0'),dd=String(venc.getDate()).padStart(2,'0');
   sv('licFechaVenc',`${yyyy}-${mm}-${dd}`);
-  if(hint)hint.textContent=(tipo==='mensual'?'📅 Calculada automáticamente: mismo día, próximo mes.':'📆 Calculada automáticamente: mismo día y mes, próximo año.')+' Puedes cambiarla manualmente si lo necesitas.';
+  if(hint)hint.textContent=(tipo==='mensual'?'📅 Calculada automáticamente: mismo día, próximo mes.':'📆 Calculada automáticamente: mismo día y mes, según la duración indicada.')+' Puedes cambiarla manualmente si lo necesitas.';
 }
 function openLicencia(id){
   editingId.lic=id||null;
   document.getElementById('mLicTitle').textContent=id?'Editar licencia':'Nueva licencia';
-  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta','licCorreo'].forEach(f=>sv(f,''));sv('licSeats',1);
+  ['licNombre','licVendor','licClave','licNotas','licFechaInicio','licFechaVenc','licCosto','licBanco','licTarjeta4','licVencTarjeta','licCorreo'].forEach(f=>sv(f,''));sv('licSeats',1);sv('licDuracion','');
   licVencs=[];
-  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');sv('licCorreo',l.correo||'');
+  if(id){const l=cache.licencias.find(x=>x.id==id);if(l){sv('licNombre',l.nombre);sv('licVendor',l.vendor||'');sv('licTipo',l.tipo||'anual');sv('licCategoria',l.categoria||'productividad');sv('licClave',l.clave||'');sv('licSeats',l.seats||1);sv('licCosto',l.costo||'');sv('licEmpresa',l.empresaId);sv('licEmpleado',l.empleadoId||'');sv('licEquipo',l.equipoId||'');sv('licFechaInicio',l.fechaInicio||'');sv('licFechaVenc',l.fechaVenc||'');sv('licNotas',l.notas||'');sv('licBanco',l.banco||'');sv('licTarjeta4',l.tarjeta4||'');sv('licVencTarjeta',l.vencTarjeta||'');sv('licCorreo',l.correo||'');sv('licDuracion',l.duracionAnios||'');
     licVencs=(l.vencimientos&&l.vencimientos.length)?l.vencimientos.map(x=>({...x})):(l.fechaVenc?[{fecha:l.fechaVenc,pagado:!!l.pagado,fechaPago:l.fechaPago||''}]:[]);
   }}
+  const durRow=document.getElementById('licDuracionRow');
+  if(durRow)durRow.style.display=(v('licTipo')==='anual')?'':'none';
   renderLicVencList();
   openModal('ovLicencia');
 }
@@ -1719,7 +1764,7 @@ async function saveLicencia(){
   const vencimientos=[...licVencs];
   const pagado=vencimientos.length?vencimientos.every(x=>x.pagado):false;
   const ultimoPago=vencimientos.filter(x=>x.pagado&&x.fechaPago).map(x=>x.fechaPago).sort().pop()||'';
-  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim(),vencimientos,pagado,fechaPago:ultimoPago};
+  const data={nombre,vendor:v('licVendor'),tipo:v('licTipo'),categoria:v('licCategoria'),clave:v('licClave'),seats:parseInt(v('licSeats'))||1,costo:parseFloat(v('licCosto'))||0,empresaId:parseInt(v('licEmpresa'))||0,empleadoId:v('licEmpleado')||null,equipoId:v('licEquipo')||null,fechaInicio:v('licFechaInicio'),fechaVenc:v('licFechaVenc'),duracionAnios:v('licTipo')==='anual'?(parseInt(v('licDuracion'))||1):1,notas:v('licNotas'),banco:v('licBanco'),tarjeta4,vencTarjeta:v('licVencTarjeta'),correo:v('licCorreo').trim(),vencimientos,pagado,fechaPago:ultimoPago};
   const r=editingId.lic?await PUT('licencias/'+editingId.lic,data):await POST('licencias',data);
   if(r&&!r.error){closeModal('ovLicencia');await loadAll();renderLicencias();toast('Licencia guardada');}
   else toast('Error al guardar','warning');
