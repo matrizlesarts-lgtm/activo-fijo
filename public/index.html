@@ -268,13 +268,31 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="stats-grid" id="licStatsGrid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px"></div>
 
     <div id="licView-cards" class="lic-subview active">
-      <div class="search-row">
+      <div class="search-row" style="align-items:center">
         <input type="text" id="searchLic" placeholder="🔍 Buscar licencia..." oninput="renderLicencias()">
         <select id="fTipoLic" onchange="renderLicencias()"><option value="">Todos los tipos</option><option value="perpetua">Perpetua</option><option value="mensual">Mensual</option><option value="anual">Anual</option></select>
         <select id="fEstLic" onchange="renderLicencias()"><option value="">Todos los estados</option><option value="activa">Activa</option><option value="por vencer">Por vencer</option><option value="vencida">Vencida</option></select>
         <select id="fPagoLic" onchange="renderLicencias()"><option value="">Pagada y no pagada</option><option value="si">✅ Pagadas</option><option value="no">❌ No pagadas</option></select>
+        <div style="display:flex;gap:4px;margin-left:auto">
+          <button class="btn btn-sm lic-format-btn active" id="licFormatBtnCards" onclick="switchLicFormat('cards')" title="Vista de tarjetas">🗃️ Tarjetas</button>
+          <button class="btn btn-sm lic-format-btn" id="licFormatBtnTabla" onclick="switchLicFormat('tabla')" title="Vista de tabla">📋 Tabla</button>
+        </div>
       </div>
       <div class="licenses-grid" id="licenciasGrid"></div>
+      <div class="table-wrap" id="licenciasTablaWrap" style="display:none">
+        <table><thead><tr>
+          <th class="sortable-th" onclick="sortLicTabla('nombre')">Licencia <span id="sortIcT-nombre"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('vendor')">Vendor <span id="sortIcT-vendor"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('tipo')">Tipo <span id="sortIcT-tipo"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('duracionTxt')">Duración <span id="sortIcT-duracionTxt"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('fechaVenc')">Vence <span id="sortIcT-fechaVenc"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('estado')">Estado <span id="sortIcT-estado"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('empresa')">Empresa <span id="sortIcT-empresa"></span></th>
+          <th class="sortable-th" onclick="sortLicTabla('costo')">Costo <span id="sortIcT-costo"></span></th>
+          <th>Pago</th>
+          <th>Acciones</th>
+        </tr></thead><tbody id="tbLicenciasTabla"></tbody></table>
+      </div>
     </div>
 
     <div id="licView-personas" class="lic-subview" style="display:none">
@@ -1222,6 +1240,7 @@ function renderLicStats(){
   }
 }
 function renderLicencias(){
+  if(licFormato==='tabla'&&document.getElementById('licFormatBtnTabla')&&!document.getElementById('licFormatBtnTabla').classList.contains('active'))switchLicFormat('tabla');
   const q=v('searchLic').toLowerCase(),fT=v('fTipoLic'),fE=v('fEstLic'),fP=v('fPagoLic');
   const CI={productividad:'📝',seguridad:'🛡️',diseno:'🎨',desarrollo:'💻',comunicacion:'💬',contabilidad:'📊',otro:'📦'};
 
@@ -1271,6 +1290,7 @@ function renderLicencias(){
         <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${l.id})" title="Eliminar licencia">🗑</button>
       </div>
     </div>`;}).join(''):'<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔑</div>Sin licencias registradas</div>';
+  renderLicenciasTabla(list);
   renderLicPorPersona();
 }
 
@@ -1411,6 +1431,66 @@ function switchLicView(which){
   document.getElementById('licView-cards').style.display=which==='cards'?'block':'none';
   document.getElementById('licView-personas').style.display=which==='personas'?'block':'none';
   if(which==='personas')renderLicPorPersona();
+}
+let licFormato=localStorage.getItem('licFormato')||'cards';
+function switchLicFormat(which){
+  licFormato=which;
+  localStorage.setItem('licFormato',which);
+  document.getElementById('licFormatBtnCards').classList.toggle('active',which==='cards');
+  document.getElementById('licFormatBtnTabla').classList.toggle('active',which==='tabla');
+  document.getElementById('licenciasGrid').style.display=which==='cards'?'grid':'none';
+  document.getElementById('licenciasTablaWrap').style.display=which==='tabla'?'block':'none';
+}
+let licTablaSort={col:'nombre',dir:1};
+function sortLicTabla(col){
+  if(licTablaSort.col===col)licTablaSort.dir*=-1;else{licTablaSort.col=col;licTablaSort.dir=1;}
+  renderLicencias();
+}
+function renderLicenciasTabla(list){
+  const tbody=document.getElementById('tbLicenciasTabla');
+  if(!tbody)return;
+  const rows=list.map(l=>{
+    const est=getLicEst(l);
+    const vencs=l.vencimientos||[];
+    const pagadosCount=vencs.filter(x=>x.pagado).length;
+    let pagoTxt;
+    if(!vencs.length)pagoTxt=badge('Sin fechas','gray');
+    else if(pagadosCount===vencs.length)pagoTxt=badge('✅ '+pagadosCount+'/'+vencs.length,'green');
+    else if(pagadosCount===0)pagoTxt=badge('❌ 0/'+vencs.length,'red');
+    else pagoTxt=badge('⚠️ '+pagadosCount+'/'+vencs.length,'amber');
+    return{
+      id:l.id,nombre:l.nombre||'',vendor:l.vendor||'-',tipo:l.tipo||'-',
+      duracionTxt:duracionTxt(l),
+      fechaVenc:l.fechaVenc||(l.tipo==='perpetua'?'—':'-'),
+      estado:est.st,estCls:est.cls,
+      empresa:empN(l.empresaId),
+      costo:parseFloat(l.costo)||0,
+      pagoTxt
+    };
+  });
+  const{col,dir}=licTablaSort;
+  rows.sort((a,b)=>{
+    let av=a[col],bv=b[col];
+    if(col==='costo')return(av-bv)*dir;
+    av=(av||'').toString().toLowerCase();bv=(bv||'').toString().toLowerCase();
+    return av.localeCompare(bv)*dir;
+  });
+  ['nombre','vendor','tipo','duracionTxt','fechaVenc','estado','empresa','costo'].forEach(c=>{
+    const ic=document.getElementById('sortIcT-'+c);
+    if(ic)ic.textContent=col===c?(dir===1?'▲':'▼'):'';
+  });
+  tbody.innerHTML=rows.length?rows.map(r=>`<tr>
+    <td>${r.nombre}</td>
+    <td>${r.vendor}</td>
+    <td>${r.tipo}</td>
+    <td>${r.duracionTxt||'-'}</td>
+    <td>${r.fechaVenc}</td>
+    <td>${badge(r.estado,r.estCls)}</td>
+    <td>${r.empresa}</td>
+    <td>${r.costo?'$'+r.costo.toFixed(2):'-'}</td>
+    <td>${r.pagoTxt}</td>
+    <td style="white-space:nowrap"><button class="btn btn-sm" onclick="openLicencia(${r.id})" title="Editar">✎</button> <button class="btn btn-sm" onclick="duplicarLicencia(${r.id})" title="Duplicar">⧉</button> <button class="btn btn-sm btn-danger" onclick="delRecord('licencias',${r.id})" title="Eliminar">🗑</button></td>
+  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3)">Sin licencias registradas</td></tr>';
 }
 let licPersSort={col:'fechaVenc',dir:1};
 function sortLicPersonas(col){
