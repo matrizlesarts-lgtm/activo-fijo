@@ -412,7 +412,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
   <div id="sub-categorias" class="sub-page active">
     <div class="card">
       <div class="card-header"><span class="card-title">◈ Categorías de activos</span><button class="btn btn-primary btn-sm" onclick="openCategoria()">+ Nueva</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCategorias"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Logo</th><th>Categoría</th><th>Tipo</th><th>Vida útil</th><th>% Dep.</th><th>Activos</th><th>Acciones</th></tr></thead><tbody id="tbCategorias"></tbody></table></div>
     </div>
   </div>
 
@@ -2266,7 +2266,8 @@ function renderCategorias(){
   document.getElementById('tbCategorias').innerHTML=cache.categorias.map(c=>{
     const n=cache.activos.filter(a=>a.categoriaId==c.id).length;
     return`<tr>
-      <td>${catIcon(c.id)}<span style="font-weight:500">${c.nombre}</span></td>
+      <td>${c.logo?`<img src="${c.logo}" style="width:36px;height:36px;object-fit:contain;border:1.5px solid var(--border);border-radius:8px;background:#fff">`:`<span style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1.5px dashed var(--border);border-radius:8px;color:var(--text3)">◈</span>`}</td>
+      <td><span style="font-weight:500">${c.nombre}</span></td>
       <td>${badge(c.tipo,'blue')}</td>
       <td>${c.vidaUtil||'-'} años</td>
       <td>${c.depreciacion||'-'}%</td>
@@ -2276,7 +2277,7 @@ function renderCategorias(){
         <button class="btn btn-sm" onclick="duplicarCategoria(${c.id})" title="Crear una categoría nueva copiando estos datos">⧉ Duplicar</button>
         <button class="btn btn-sm btn-danger" onclick="delRecord('categorias',${c.id})">🗑</button>
       </div></td>
-    </tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">◈</div>Sin categorías</div></td></tr>';
+    </tr>`;}).join('')||'<tr><td colspan="7"><div class="empty"><div class="empty-icon">◈</div>Sin categorías</div></td></tr>';
 }
 
 function openTraslado(){
