@@ -405,6 +405,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <button class="page-tab" onclick="switchPageTab(this,'sub-empresas')">🏢 Empresas</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-bancos')">🏦 Bancos</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-duraciones')">⏳ Duraciones</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-accesorios')">🔌 Accesorios</button>
     </div>
   </div>
 
@@ -449,6 +450,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="card-header"><span class="card-title">⏳ Duraciones de licencia</span><button class="btn btn-primary btn-sm" onclick="openDuracion()">+ Nueva</button></div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Cada cuánto se renueva una licencia: en meses, en años, o perpetua (sin renovación). Crea aquí las que vayas necesitando — el sistema calcula las fechas de pago según la que elijas en cada licencia.</p>
       <div class="table-wrap"><table><thead><tr><th>Duración</th><th>Renovación</th><th>Licencias asociadas</th><th>Acciones</th></tr></thead><tbody id="tbDuraciones"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-accesorios" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🔌 Accesorios</span><button class="btn btn-primary btn-sm" onclick="openAccesorio()">+ Nuevo</button></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Lista de accesorios comunes (cargador, mouse, maletín, etc.) para elegir rápido al registrar un activo, en vez de escribirlos cada vez.</p>
+      <div class="table-wrap"><table><thead><tr><th>Accesorio</th><th>Acciones</th></tr></thead><tbody id="tbAccesorios"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -663,7 +672,8 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="fgroup"><label>Especificaciones</label><textarea id="aEspec"></textarea></div>
       <div class="fgroup"><label>Accesorios</label>
         <div id="accList" style="margin-bottom:8px"></div>
-        <div style="display:flex;gap:8px"><input id="newAcc" placeholder="Agregar accesorio..." style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
+        <div style="display:flex;gap:8px"><select id="newAcc" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit"><option value="">Selecciona un accesorio...</option></select><button class="btn btn-sm" onclick="addAcc()">+ Agregar</button></div>
+        <div style="margin-top:6px"><span style="font-size:12px;color:var(--text3);cursor:pointer;text-decoration:underline" onclick="openAccesorio()">+ Agregar un accesorio nuevo a la lista</span></div>
       </div>
     </div>
     <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovActivo')">Cancelar</button><button class="btn btn-primary" onclick="saveActivo()">Guardar activo</button></div>
@@ -713,6 +723,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="modal-header"><span class="modal-title" id="mBancoTitle">Nuevo banco</span><button class="modal-close" onclick="closeModalSafe('ovBanco')">×</button></div>
     <div class="fgroup"><label>Nombre del banco *</label><input id="bcNombre" placeholder="Banco Agrícola"></div>
     <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovBanco')">Cancelar</button><button class="btn btn-primary" onclick="saveBanco()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovAccesorio">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mAccesorioTitle">Nuevo accesorio</span><button class="modal-close" onclick="closeModalSafe('ovAccesorio')">×</button></div>
+    <div class="fgroup"><label>Nombre del accesorio *</label><input id="acNombre" placeholder="Cargador"></div>
+    <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovAccesorio')">Cancelar</button><button class="btn btn-primary" onclick="saveAccesorio()">Guardar</button></div>
   </div>
 </div>
 
@@ -859,7 +877,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="toast"></div>
 
 <script>
-let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[],duraciones:[]};
+let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[],duraciones:[],accesorios:[]};
 let gfModoActivo='existente';
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;let licVencs=[];let currentPage='dashboard';
 
@@ -1068,7 +1086,7 @@ function renderPage(p){
     dashboard: renderDashboard,
     tecnologia: ()=>{ renderEquipos(); renderLicencias(); renderAsignaciones(); },
     inventario: ()=>{ renderActivos(); renderBodega(); renderBajas(); },
-    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); renderDuraciones(); },
+    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); renderDuraciones(); renderAccesoriosCat(); },
     reportes:   ()=>{ renderHistorial(); renderTraslados(); renderDepr(); populateReportSelects(); },
     sistema:    ()=>{ renderUsuarios(); renderFichas(); }
   };
@@ -1076,7 +1094,7 @@ function renderPage(p){
 }
 
 async function loadAll(){
-  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos','duraciones'];
+  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos','duraciones','accesorios'];
   const results=await Promise.all(keys.map(k=>GET(k)));
   keys.forEach((k,i)=>{if(results[i]&&Array.isArray(results[i]))cache[k]=results[i];});
   populateAllSelects();
@@ -1104,6 +1122,7 @@ const HCOL={alta:'#7c3aed',asignacion:'#16a34a',traslado:'#3b6ff0',devolucion:'#
 function sel(id,opts,empty){const el=document.getElementById(id);if(!el)return;const prev=el.value;el.innerHTML=(empty!==undefined?`<option value="">${empty}</option>`:'')+opts;if(prev)el.value=prev;}
 const empOpts=()=>cache.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
 const bancoOpts=()=>cache.bancos.map(b=>`<option value="${b.nombre}">${b.nombre}</option>`).join('');
+const accesorioOpts=()=>cache.accesorios.map(ac=>`<option value="${ac.nombre}">${ac.nombre}</option>`).join('');
 const duracionOpts=()=>cache.duraciones.map(d=>{
   const label=d.unidad==='perpetua'?`🔒 ${d.nombre} (no se renueva)`:d.unidad==='mes'?`📅 ${d.nombre} (cada ${d.cantidad} ${d.cantidad==1?'mes':'meses'})`:`📆 ${d.nombre} (cada ${d.cantidad} ${d.cantidad==1?'año':'años'})`;
   return `<option value="${d.id}">${label}</option>`;
@@ -1124,6 +1143,7 @@ function populateAllSelects(){
   sel('eEmpresa',empOpts());sel('eArea',areaOpts(),'Sin área');
   sel('arEmpresa',empOpts());sel('arResp',empNmOpts(),'Sin responsable');
   sel('asActivo',activoOpts());sel('asEmp',empNmOpts());sel('asEmpUso',empOpts());
+  sel('newAcc',accesorioOpts(),'Selecciona un accesorio...');
   sel('baActivo',activoOpts());sel('uEmpresa',empOpts(),'Todas');
   sel('licEmpresa',empOpts());sel('licEmpleado',empNmOpts(),'Sin asignar');sel('licEquipo',eqOpts(),'Sin equipo');sel('licBanco',bancoOpts(),'Sin especificar');sel('licDuracion',duracionOpts());sel('trActivo',activoOpts());sel('trNuevoEmp',empNmOpts());sel('trEmpDest',empOpts());
   populateReportSelects();
@@ -1371,6 +1391,31 @@ function renderEmpresas(){
 function renderBancos(){
   const el=document.getElementById('tbBancos'); if(!el) return;
   el.innerHTML=cache.bancos.map(b=>{const n=cache.licencias.filter(l=>l.banco===b.nombre).length;return`<tr><td><span style="font-weight:500">🏦 ${b.nombre}</span></td><td>${n}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openBanco(${b.id})">Editar</button><button class="btn btn-sm btn-danger" onclick="delRecord('bancos',${b.id})" title="Eliminar banco">🗑</button></div></td></tr>`;}).join('')||'<tr><td colspan="3"><div class="empty"><div class="empty-icon">🏦</div>Sin bancos registrados</div></td></tr>';
+}
+function renderAccesoriosCat(){
+  const el=document.getElementById('tbAccesorios'); if(!el) return;
+  el.innerHTML=cache.accesorios.map(ac=>`<tr><td><span style="font-weight:500">🔌 ${ac.nombre}</span></td><td><div class="btn-group"><button class="btn btn-sm" onclick="openAccesorio(${ac.id})">Editar</button><button class="btn btn-sm" onclick="duplicarAccesorio(${ac.id})" title="Crear un accesorio nuevo copiando este">⧉ Duplicar</button><button class="btn btn-sm btn-danger" onclick="delRecord('accesorios',${ac.id})" title="Eliminar accesorio">🗑</button></div></td></tr>`).join('')||'<tr><td colspan="2"><div class="empty"><div class="empty-icon">🔌</div>Sin accesorios registrados</div></td></tr>';
+}
+function openAccesorio(id){
+  editingId.accesorio=id||null;
+  document.getElementById('mAccesorioTitle').textContent=id?'Editar accesorio':'Nuevo accesorio';
+  sv('acNombre','');
+  if(id){const ac=cache.accesorios.find(x=>x.id==id);if(ac)sv('acNombre',ac.nombre);}
+  openModal('ovAccesorio');
+}
+async function saveAccesorio(){
+  const nombre=v('acNombre').trim();if(!nombre){toast('El nombre del accesorio es requerido','warning');return;}
+  const data={nombre};
+  const r=editingId.accesorio?await PUT('accesorios/'+editingId.accesorio,data):await POST('accesorios',data);
+  if(r&&!r.error){closeModal('ovAccesorio');await loadAll();renderAccesoriosCat();populateAllSelects();toast('Accesorio guardado');}
+  else toast('Error al guardar','warning');
+}
+function duplicarAccesorio(id){
+  openAccesorio(id);
+  editingId.accesorio=null;
+  document.getElementById('mAccesorioTitle').textContent='Duplicar accesorio (se creará uno nuevo)';
+  sv('acNombre','');
+  toast('Completa el nombre del nuevo accesorio antes de guardar');
 }
 function openBanco(id){
   editingId.banco=id||null;
