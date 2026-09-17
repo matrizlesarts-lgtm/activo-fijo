@@ -2197,6 +2197,7 @@ function renderCategorias(){
       <td>${n}</td>
       <td><div class="btn-group">
         <button class="btn btn-sm" onclick="openCategoria(${c.id})">Editar</button>
+        <button class="btn btn-sm" onclick="duplicarCategoria(${c.id})" title="Crear una categoría nueva copiando estos datos">⧉ Duplicar</button>
         <button class="btn btn-sm btn-danger" onclick="delRecord('categorias',${c.id})">🗑</button>
       </div></td>
     </tr>`;}).join('')||'<tr><td colspan="6"><div class="empty"><div class="empty-icon">◈</div>Sin categorías</div></td></tr>';
@@ -2235,6 +2236,13 @@ async function saveCategoria(){
   const r=editingId.cat?await PUT('categorias/'+editingId.cat,data):await POST('categorias',data);
   if(r&&!r.error){closeModal('ovCategoria');await loadAll();renderCategorias();toast('Categoría guardada');}
   else toast('Error al guardar','warning');
+}
+function duplicarCategoria(id){
+  openCategoria(id);
+  editingId.cat=null;
+  document.getElementById('mCatTitle').textContent='Duplicar categoría (se creará una nueva)';
+  sv('cNombre','');
+  toast('Completa el nombre de la nueva categoría antes de guardar');
 }
 
 // ─── FICHAS ───────────────────────────────────────────────────
