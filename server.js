@@ -173,13 +173,15 @@ function requireAuth(req, res) {
 //   GOOGLE_DRIVE_FOLDER_ID        -> ID de la carpeta de Drive compartida con esa cuenta
 const crypto = require('crypto');
 let driveTokenCache = { token: null, exp: 0 };
+let driveOAuthTokenCache = { token: null, exp: 0 };
+const OAUTH_REDIRECT_URI = 'https://activo-fijo-multi-empresa.up.railway.app/api/auth-google-callback';
 
 function base64url(buf) {
   const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
   return b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function getDriveAccessToken() {
+async function getDriveAccessTokenServiceAccount() {
   const now = Math.floor(Date.now() / 1000);
   if (driveTokenCache.token && driveTokenCache.exp > now + 60) return driveTokenCache.token;
 
@@ -211,6 +213,32 @@ async function getDriveAccessToken() {
   if (!data.access_token) throw new Error('No se pudo autenticar con Google Drive: ' + JSON.stringify(data));
   driveTokenCache = { token: data.access_token, exp: now + (data.expires_in || 3600) };
   return data.access_token;
+}
+
+async function getDriveAccessTokenOAuth() {
+  const now = Math.floor(Date.now() / 1000);
+  if (driveOAuthTokenCache.token && driveOAuthTokenCache.exp > now + 60) return driveOAuthTokenCache.token;
+  const refreshToken = db.config && db.config.googleOAuthRefreshToken;
+  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+  if (!refreshToken || !clientId || !clientSecret) return null;
+  try {
+    const resp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'client_id=' + encodeURIComponent(clientId) + '&client_secret=' + encodeURIComponent(clientSecret) + '&refresh_token=' + encodeURIComponent(refreshToken) + '&grant_type=refresh_token'
+    });
+    const data = await resp.json();
+    if (!data.access_token) { console.error('No se pudo refrescar token OAuth de Google:', data); return null; }
+    driveOAuthTokenCache = { token: data.access_token, exp: now + (data.expires_in || 3600) };
+    return data.access_token;
+  } catch (e) { console.error('Error refrescando token OAuth de Google:', e.message); return null; }
+}
+
+async function getDriveAccessToken() {
+  const oauthToken = await getDriveAccessTokenOAuth();
+  if (oauthToken) return oauthToken;
+  return getDriveAccessTokenServiceAccount();
 }
 
 async function subirFotoADrive(dataUrl, nombreArchivo) {
@@ -392,6 +420,67 @@ const server = http.createServer(async (req, res) => {
 
     // Auth guard para el resto
     if (!requireAuth(req, res)) return;
+
+    // Conectar cuenta personal de Google (OAuth) para subir fotos con su propio espacio
+    if (parts[1] === 'auth-google-start' && req.method === 'GET') {
+      const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+      if (!clientId) { res.writeHead(500, {'Content-Type':'text/html;charset=utf-8'}); return res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Falta configurar GOOGLE_OAUTH_CLIENT_ID en el servidor</h2></body></html>'); }
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: OAUTH_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        access_type: 'offline',
+        prompt: 'consent'
+      });
+      res.writeHead(302, { Location: 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString() });
+      return res.end();
+    }
+
+    if (parts[1] === 'auth-google-callback' && req.method === 'GET') {
+      const code = parsed.query.code;
+      if (!code) { res.writeHead(400, {'Content-Type':'text/html;charset=utf-8'}); return res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Falta el código de autorización</h2></body></html>'); }
+      try {
+        const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+        const resp = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'code=' + encodeURIComponent(code) + '&client_id=' + encodeURIComponent(clientId) + '&client_secret=' + encodeURIComponent(clientSecret) + '&redirect_uri=' + encodeURIComponent(OAUTH_REDIRECT_URI) + '&grant_type=authorization_code'
+        });
+        const data = await resp.json();
+        if (!data.refresh_token && !(db.config && db.config.googleOAuthRefreshToken)) {
+          res.writeHead(400, {'Content-Type':'text/html;charset=utf-8'});
+          return res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Google no envió un token de actualización.</h2><p>Esto pasa si ya habías conectado esta cuenta antes. Ve a myaccount.google.com → Seguridad → Aplicaciones de terceros, quita el acceso de AssetPro, y vuelve a intentar.</p></body></html>');
+        }
+        if (!db.config) db.config = {};
+        if (data.refresh_token) db.config.googleOAuthRefreshToken = data.refresh_token;
+        db.config.googleOAuthConectadoEn = new Date().toISOString();
+        saveDB(db);
+        driveOAuthTokenCache = { token: null, exp: 0 };
+        res.writeHead(200, {'Content-Type':'text/html;charset=utf-8'});
+        return res.end('<html><body style="font-family:sans-serif;padding:40px;text-align:center"><h2>✅ Cuenta de Google conectada</h2><p>Ya puedes cerrar esta pestaña y volver a AssetPro.</p></body></html>');
+      } catch (e) {
+        res.writeHead(500, {'Content-Type':'text/html;charset=utf-8'});
+        return res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Error al conectar con Google</h2><p>' + e.message + '</p></body></html>');
+      }
+    }
+
+    if (parts[1] === 'auth-google-status' && req.method === 'GET') {
+      const conectado = !!(db.config && db.config.googleOAuthRefreshToken);
+      let email = null;
+      if (conectado) {
+        try {
+          const token = await getDriveAccessTokenOAuth();
+          if (token) {
+            const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + token } });
+            const info = await r.json();
+            email = info.email || null;
+          }
+        } catch (e) {}
+      }
+      return jsonRes(res, 200, { conectado, email, desde: (db.config && db.config.googleOAuthConectadoEn) || null });
+    }
 
     // Subir foto de equipo a Google Drive
     if (parts[1] === 'upload-foto' && req.method === 'POST') {
