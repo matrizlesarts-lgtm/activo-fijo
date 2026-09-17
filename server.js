@@ -95,7 +95,7 @@ let db = loadDB();
 // y le faltan colecciones nuevas (equipos, licencias, fichas, etc.),
 // se crean vacías aquí en vez de fallar. No borra nada existente.
 (function migrarDB() {
-  const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
+  const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos','duraciones','accesorios','tiposequipo'];
   let cambiado = false;
   COLECCIONES.forEach(k => { if (!Array.isArray(db[k])) { db[k] = []; cambiado = true; } });
   if (!db.sesiones || typeof db.sesiones !== 'object') { db.sesiones = {}; cambiado = true; }
@@ -112,6 +112,22 @@ let db = loadDB();
       { id: 8, nombre: 'Banco Azul' },
       { id: 9, nombre: 'Banco G&T Continental' },
       { id: 10, nombre: 'Banco Industrial El Salvador' }
+    ];
+    cambiado = true;
+  }
+  // Si el catálogo de tipos de equipo se acaba de crear vacío, precargar los que ya existían fijos en el sistema
+  if (Array.isArray(db.tiposequipo) && db.tiposequipo.length === 0) {
+    db.tiposequipo = [
+      { id: 1, valor: 'laptop', nombre: 'Laptop', emoji: '💻' },
+      { id: 2, valor: 'desktop', nombre: 'Desktop', emoji: '🖥️' },
+      { id: 3, valor: 'monitor', nombre: 'Monitor', emoji: '🖥' },
+      { id: 4, valor: 'impresora', nombre: 'Impresora', emoji: '🖨️' },
+      { id: 5, valor: 'telefono', nombre: 'Teléfono', emoji: '📱' },
+      { id: 6, valor: 'tablet', nombre: 'Tablet', emoji: '📟' },
+      { id: 7, valor: 'servidor', nombre: 'Servidor', emoji: '🗄️' },
+      { id: 8, valor: 'red', nombre: 'Red', emoji: '🌐' },
+      { id: 9, valor: 'camara', nombre: 'Cámara', emoji: '📷' },
+      { id: 10, valor: 'otro', nombre: 'Otro', emoji: '📦' }
     ];
     cambiado = true;
   }
@@ -385,7 +401,7 @@ const server = http.createServer(async (req, res) => {
     if (parts[1] === 'diagnostico' && req.method === 'GET') {
       const s = requireAuth(req, res); if (!s) return;
       if (s.rol !== 'admin') return jsonRes(res, 403, { error: 'Solo administradores' });
-      const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos'];
+      const COLECCIONES = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos','duraciones','accesorios','tiposequipo'];
       const detalle = COLECCIONES.map(k => ({
         coleccion: k,
         existe: Array.isArray(db[k]),
@@ -502,7 +518,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // TABLAS CRUD
-    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos','duraciones','accesorios'];
+    const TABLAS = ['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','fichas','bancos','duraciones','accesorios','tiposequipo'];
     if (TABLAS.includes(parts[1])) return crudHandler(parts[1], req, res, parts);
 
     // Generar ficha
