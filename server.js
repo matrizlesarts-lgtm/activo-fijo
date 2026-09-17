@@ -230,7 +230,7 @@ async function subirFotoADrive(dataUrl, nombreArchivo) {
     Buffer.from(`\r\n--${boundary}--`)
   ]);
 
-  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id&supportsAllDrives=true', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': `multipart/related; boundary=${boundary}` },
     body
@@ -239,7 +239,7 @@ async function subirFotoADrive(dataUrl, nombreArchivo) {
   if (!data.id) throw new Error('Error al subir la foto a Drive: ' + JSON.stringify(data));
 
   // Hacer visible con el enlace (para poder mostrarla luego con <img>)
-  await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions`, {
+  await fetch(`https://www.googleapis.com/drive/v3/files/${data.id}/permissions?supportsAllDrives=true`, {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: 'reader', type: 'anyone' })
@@ -252,7 +252,7 @@ async function eliminarFotoDeDrive(fileId) {
   if (!fileId) return;
   try {
     const token = await getDriveAccessToken();
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
