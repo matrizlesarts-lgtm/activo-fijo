@@ -251,7 +251,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <input type="text" id="searchEquipo" placeholder="🔍 Buscar equipo..." oninput="renderEquipos()">
         <select id="fAreaEquipo" onchange="renderEquipos()"><option value="">Todas las áreas</option></select>
         <select id="fEstEquipo" onchange="renderEquipos()"><option value="">Todos los estados</option><option value="disponible">Disponible</option><option value="asignado">Asignado</option><option value="mantenimiento">Mantenimiento</option><option value="baja">Baja</option></select>
-        <select id="fTipoEquipo" onchange="renderEquipos()"><option value="">Todos los tipos</option><option value="laptop">Laptop</option><option value="desktop">Desktop</option><option value="monitor">Monitor</option><option value="impresora">Impresora</option><option value="telefono">Teléfono</option><option value="tablet">Tablet</option><option value="servidor">Servidor</option><option value="red">Red</option><option value="camara">Cámara</option><option value="otro">Otro</option></select>
+        <select id="fTipoEquipo" onchange="renderEquipos()"></select>
       </div>
       <div class="table-wrap"><table><thead><tr><th>Código</th><th>Equipo</th><th>Tipo</th><th>Marca/Modelo</th><th>Serie</th><th>Estado</th><th>Asignado a</th><th>Área</th><th>Acciones</th></tr></thead><tbody id="tbEquipos"></tbody></table></div>
     </div>
@@ -406,6 +406,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <button class="page-tab" onclick="switchPageTab(this,'sub-bancos')">🏦 Bancos</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-duraciones')">⏳ Duraciones</button>
       <button class="page-tab" onclick="switchPageTab(this,'sub-accesorios')">🔌 Accesorios</button>
+      <button class="page-tab" onclick="switchPageTab(this,'sub-tiposequipo')">🖥️ Tipos de equipo</button>
     </div>
   </div>
 
@@ -458,6 +459,14 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
       <div class="card-header"><span class="card-title">🔌 Accesorios</span><button class="btn btn-primary btn-sm" onclick="openAccesorio()">+ Nuevo</button></div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Lista de accesorios comunes (cargador, mouse, maletín, etc.) para elegir rápido al registrar un activo, en vez de escribirlos cada vez.</p>
       <div class="table-wrap"><table><thead><tr><th>Accesorio</th><th>Acciones</th></tr></thead><tbody id="tbAccesorios"></tbody></table></div>
+    </div>
+  </div>
+
+  <div id="sub-tiposequipo" class="sub-page">
+    <div class="card">
+      <div class="card-header"><span class="card-title">🖥️ Tipos de equipo</span><button class="btn btn-primary btn-sm" onclick="openTipoEquipo()">+ Nuevo</button></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Los tipos que aparecen al registrar un equipo (Laptop, Desktop, Impresora, etc.). Agrega aquí los que te hagan falta.</p>
+      <div class="table-wrap"><table><thead><tr><th>Ícono</th><th>Nombre</th><th>Equipos</th><th>Acciones</th></tr></thead><tbody id="tbTiposEquipo"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -597,7 +606,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
           <button type="button" class="btn btn-sm" style="margin-top:6px;display:none" id="btnQuitarFoto" onclick="quitarEqFoto()">Quitar foto</button>
         </div>
       </div>
-      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"><option value="laptop">💻 Laptop</option><option value="desktop">🖥️ Desktop</option><option value="monitor">🖥 Monitor</option><option value="impresora">🖨️ Impresora</option><option value="telefono">📱 Teléfono</option><option value="tablet">📟 Tablet</option><option value="servidor">🗄️ Servidor</option><option value="red">🌐 Red</option><option value="camara">📷 Cámara</option><option value="otro">📦 Otro</option></select></div></div>
+      <div class="form-row"><div class="fgroup"><label>Código *</label><input id="eqCodigo" placeholder="EQ-001"></div><div class="fgroup"><label>Tipo *</label><select id="eqTipo"></select></div></div>
       <div class="fgroup"><label>Descripción *</label><input id="eqDesc" placeholder="Ej: Laptop Dell Latitude 5520"></div>
       <div class="form-row"><div class="fgroup"><label>Marca</label><input id="eqMarca"></div><div class="fgroup"><label>Modelo</label><input id="eqModelo"></div></div>
       <div class="form-row"><div class="fgroup"><label>No. de serie</label><input id="eqSerie"></div><div class="fgroup"><label>Color</label><input id="eqColor"></div></div>
@@ -741,6 +750,21 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
     <div class="modal-header"><span class="modal-title" id="mAccesorioTitle">Nuevo accesorio</span><button class="modal-close" onclick="closeModalSafe('ovAccesorio')">×</button></div>
     <div class="fgroup"><label>Nombre del accesorio *</label><input id="acNombre" placeholder="Cargador"></div>
     <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovAccesorio')">Cancelar</button><button class="btn btn-primary" onclick="saveAccesorio()">Guardar</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovTipoEquipo">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="mTipoEquipoTitle">Nuevo tipo de equipo</span><button class="modal-close" onclick="closeModalSafe('ovTipoEquipo')">×</button></div>
+    <div class="fgroup"><label>Nombre *</label><input id="teNombre" placeholder="Escáner"></div>
+    <div class="fgroup"><label>Ícono</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span id="teEmojiPreview" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border);border-radius:8px;font-size:20px">📦</span>
+        <span style="font-size:12px;color:var(--text2)">Elige uno de la lista de abajo</span>
+      </div>
+      <div id="teEmojis" style="display:flex;flex-wrap:wrap;gap:4px;max-height:110px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px"></div>
+    </div>
+    <div class="form-actions"><button class="btn" onclick="closeModalSafe('ovTipoEquipo')">Cancelar</button><button class="btn btn-primary" onclick="saveTipoEquipo()">Guardar</button></div>
   </div>
 </div>
 
@@ -897,7 +921,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
 <div id="toast"></div>
 
 <script>
-let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[],duraciones:[],accesorios:[]};
+let cache={empresas:[],categorias:[],areas:[],empleados:[],activos:[],asignaciones:[],traslados:[],bajas:[],historial:[],usuarios:[],equipos:[],licencias:[],bancos:[],duraciones:[],accesorios:[],tiposequipo:[]};
 let gfModoActivo='existente';
 let editingId={};let accs=[],eqAccs=[];let currentDetId=null;let globalEmp='';let currentUser=null;let licVencs=[];let currentPage='dashboard';
 
@@ -1119,7 +1143,7 @@ function renderPage(p){
     dashboard: renderDashboard,
     tecnologia: ()=>{ renderEquipos(); renderLicencias(); renderAsignaciones(); },
     inventario: ()=>{ renderActivos(); renderBodega(); renderBajas(); },
-    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); renderDuraciones(); renderAccesoriosCat(); },
+    catalogos:  ()=>{ renderCategorias(); renderEmpleados(); renderAreas(); renderEmpresas(); renderBancos(); renderDuraciones(); renderAccesoriosCat(); renderTiposEquipo(); },
     reportes:   ()=>{ renderHistorial(); renderTraslados(); renderDepr(); populateReportSelects(); },
     sistema:    ()=>{ renderUsuarios(); renderFichas(); }
   };
@@ -1127,7 +1151,7 @@ function renderPage(p){
 }
 
 async function loadAll(){
-  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos','duraciones','accesorios'];
+  const keys=['empresas','categorias','areas','empleados','activos','asignaciones','traslados','bajas','historial','usuarios','equipos','licencias','bancos','duraciones','accesorios','tiposequipo'];
   const results=await Promise.all(keys.map(k=>GET(k)));
   keys.forEach((k,i)=>{if(results[i]&&Array.isArray(results[i]))cache[k]=results[i];});
   populateAllSelects();
@@ -1156,6 +1180,7 @@ function sel(id,opts,empty){const el=document.getElementById(id);if(!el)return;c
 const empOpts=()=>cache.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
 const bancoOpts=()=>cache.bancos.map(b=>`<option value="${b.nombre}">${b.nombre}</option>`).join('');
 const accesorioOpts=()=>cache.accesorios.map(ac=>`<option value="${ac.nombre}">${ac.nombre}</option>`).join('');
+const tipoEquipoOpts=()=>cache.tiposequipo.map(t=>`<option value="${t.valor}">${t.emoji||'📦'} ${t.nombre}</option>`).join('');
 const duracionOpts=()=>cache.duraciones.map(d=>{
   const label=d.unidad==='perpetua'?`🔒 ${d.nombre} (no se renueva)`:d.unidad==='mes'?`📅 ${d.nombre} (cada ${d.cantidad} ${d.cantidad==1?'mes':'meses'})`:`📆 ${d.nombre} (cada ${d.cantidad} ${d.cantidad==1?'año':'años'})`;
   return `<option value="${d.id}">${label}</option>`;
@@ -1172,7 +1197,7 @@ function populateAllSelects(){
   sel('fCatActivo',catOpts(),'Todas categorías');sel('fEmpActivo',empOpts(),'Todas empresas (compra)');sel('fEmpUsoActivo',empOpts(),'Todas empresas (uso)');
   sel('fAreaEquipo',areaOpts(),'Todas las áreas');
   sel('aEmpresa',empOpts());sel('aCategoria',catOpts());sel('aArea',areaOpts(),'Sin área');
-  sel('eqEmpresa',empOpts());sel('eqArea',areaOpts(),'Sin área');sel('eqEmpleado',empNmOpts(),'Sin asignar');
+  sel('eqEmpresa',empOpts());sel('eqArea',areaOpts(),'Sin área');sel('eqEmpleado',empNmOpts(),'Sin asignar');sel('eqTipo',tipoEquipoOpts());sel('fTipoEquipo',tipoEquipoOpts(),'Todos los tipos');
   sel('eEmpresa',empOpts());sel('eArea',areaOpts(),'Sin área');
   sel('arEmpresa',empOpts());sel('arResp',empNmOpts(),'Sin responsable');
   sel('asActivo',activoOpts());sel('asEmp',empNmOpts());sel('asEmpUso',empOpts());
@@ -1219,7 +1244,8 @@ async function renderDashboard(){
 
 function renderEquipos(){
   const q=v('searchEquipo').toLowerCase(),fA=v('fAreaEquipo'),fE=v('fEstEquipo'),fT=v('fTipoEquipo');
-  const TI={laptop:'💻',desktop:'🖥️',monitor:'🖥',impresora:'🖨️',telefono:'📱',tablet:'📟',servidor:'🗄️',red:'🌐',camara:'📷',otro:'📦'};
+  const tiEmoji=t=>{const x=cache.tiposequipo.find(y=>y.valor===t);return x?x.emoji:'📦';};
+  const tiNombre=t=>{const x=cache.tiposequipo.find(y=>y.valor===t);return x?x.nombre:(t||'-');};
   const list=cache.equipos.filter(e=>{
     if(globalEmp&&e.empresaId&&String(e.empresaId)!==globalEmp)return false;
     if(fA&&String(e.areaId)!==fA)return false;
@@ -1231,7 +1257,7 @@ function renderEquipos(){
   document.getElementById('tbEquipos').innerHTML=list.length?list.map(e=>`<tr>
     <td><span class="mono">${e.codigo}</span></td>
     <td><div style="font-weight:500">${e.descripcion}</div>${e.observaciones?`<div style="font-size:11px;color:var(--text2)">${e.observaciones.slice(0,50)}${e.observaciones.length>50?'...':''}</div>`:''}</td>
-    <td>${TI[e.tipo]||'📦'} ${e.tipo||'-'}</td>
+    <td>${tiEmoji(e.tipo)} ${tiNombre(e.tipo)}</td>
     <td>${(e.marca||'')+' '+(e.modelo||'')}</td>
     <td><span class="mono" style="font-size:11px">${e.serie||'-'}</span></td>
     <td>${badge(e.estado||'disponible')}</td>
@@ -1449,6 +1475,50 @@ function duplicarAccesorio(id){
   document.getElementById('mAccesorioTitle').textContent='Duplicar accesorio (se creará uno nuevo)';
   sv('acNombre','');
   toast('Completa el nombre del nuevo accesorio antes de guardar');
+}
+let teEmojiSel='📦';
+function slugify(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,20)||('tipo'+Date.now());
+}
+function renderTeEmojis(){
+  const el=document.getElementById('teEmojis');if(!el)return;
+  el.innerHTML=CAT_EMOJIS.map(e=>`<button type="button" onclick="elegirTeEmoji('${e}')" style="width:32px;height:32px;font-size:18px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer">${e}</button>`).join('');
+}
+function elegirTeEmoji(emoji){
+  teEmojiSel=emoji;
+  const p=document.getElementById('teEmojiPreview');if(p)p.textContent=emoji;
+}
+function renderTiposEquipo(){
+  const el=document.getElementById('tbTiposEquipo');if(!el)return;
+  el.innerHTML=cache.tiposequipo.map(t=>{
+    const n=cache.equipos.filter(e=>e.tipo===t.valor).length;
+    return `<tr><td><span style="font-size:20px">${t.emoji||'📦'}</span></td><td><span style="font-weight:500">${t.nombre}</span></td><td>${n}</td><td><div class="btn-group"><button class="btn btn-sm" onclick="openTipoEquipo(${t.id})">Editar</button><button class="btn btn-sm" onclick="duplicarTipoEquipo(${t.id})" title="Crear un tipo nuevo copiando este">⧉ Duplicar</button><button class="btn btn-sm btn-danger" onclick="delRecord('tiposequipo',${t.id})" title="Eliminar tipo">🗑</button></div></td></tr>`;
+  }).join('')||'<tr><td colspan="4"><div class="empty"><div class="empty-icon">🖥️</div>Sin tipos registrados</div></td></tr>';
+}
+function openTipoEquipo(id){
+  editingId.tipoequipo=id||null;
+  document.getElementById('mTipoEquipoTitle').textContent=id?'Editar tipo de equipo':'Nuevo tipo de equipo';
+  sv('teNombre','');
+  teEmojiSel='📦';
+  if(id){const t=cache.tiposequipo.find(x=>x.id==id);if(t){sv('teNombre',t.nombre);teEmojiSel=t.emoji||'📦';}}
+  const p=document.getElementById('teEmojiPreview');if(p)p.textContent=teEmojiSel;
+  renderTeEmojis();
+  openModal('ovTipoEquipo');
+}
+async function saveTipoEquipo(){
+  const nombre=v('teNombre').trim();if(!nombre){toast('El nombre es requerido','warning');return;}
+  const data={nombre,emoji:teEmojiSel};
+  if(!editingId.tipoequipo)data.valor=slugify(nombre);
+  const r=editingId.tipoequipo?await PUT('tiposequipo/'+editingId.tipoequipo,data):await POST('tiposequipo',data);
+  if(r&&!r.error){closeModal('ovTipoEquipo');await loadAll();renderTiposEquipo();populateAllSelects();toast('Tipo de equipo guardado');}
+  else toast('Error al guardar','warning');
+}
+function duplicarTipoEquipo(id){
+  openTipoEquipo(id);
+  editingId.tipoequipo=null;
+  document.getElementById('mTipoEquipoTitle').textContent='Duplicar tipo de equipo (se creará uno nuevo)';
+  sv('teNombre','');
+  toast('Completa el nombre del nuevo tipo antes de guardar');
 }
 function openBanco(id){
   editingId.banco=id||null;
