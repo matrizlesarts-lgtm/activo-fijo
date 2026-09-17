@@ -1343,6 +1343,7 @@ function renderActivos(){
     <td><div class="btn-group">
       <button class="btn btn-sm" onclick="verDetalle(${a.id})" title="Ver detalle completo del activo">Ver</button>
       <button class="btn btn-sm" onclick="openActivo(${a.id})">Editar</button>
+      <button class="btn btn-sm" onclick="duplicarActivo(${a.id})" title="Crear un activo nuevo con los mismos datos (útil cuando compras varios artículos iguales)">⧉ Duplicar</button>
       <button class="btn btn-sm btn-danger" onclick="openBaja(${a.id})" title="Dar de baja este activo">Baja</button>
       <button class="btn btn-sm btn-danger" onclick="eliminarActivo(${a.id})" title="Eliminar activo permanentemente">🗑</button>
     </div></td></tr>`).join(''):'<tr><td colspan="9"><div class="empty"><div class="empty-icon">📦</div>Sin activos</div></td></tr>';
@@ -2030,6 +2031,14 @@ function duplicarLicencia(id){
   toast('Revisa la clave/licencia antes de guardar');
 }
 
+function duplicarActivo(id){
+  openActivo(id);
+  editingId.activo=null;
+  document.getElementById('mActivoTitle').textContent='Duplicar activo (se creará uno nuevo)';
+  sv('aCodigo','');
+  sv('aSerie','');
+  toast('Completa el código (y la serie si aplica) antes de guardar');
+}
 function openActivo(id){
   editingId.activo=id||null;accs=[];
   document.getElementById('mActivoTitle').textContent=id?'Editar activo':'Nuevo activo';
